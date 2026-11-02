@@ -52,58 +52,66 @@
 
     /* Container for walking characters at the bottom */
     #characters-stage {
-      position: absolute;
+      position: fixed;
       bottom: 0;
       left: 0;
-      width: 100%;
-      height: 170px;
+      width: 100vw;
+      height: 190px;
       pointer-events: none;
+      overflow: visible;
+      z-index: 25;
     }
 
-    /* Avatar Character Item */
+    /* Avatar Character Item - Fixed size, never squashed */
     .avatar-char {
       position: absolute;
-      bottom: 12px;
+      bottom: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
-      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      z-index: 20;
+      z-index: 30;
+      flex-shrink: 0;
+      width: 76px;
+      min-width: 76px;
+      pointer-events: auto;
     }
 
     /* Nametag above avatar */
     .avatar-nametag {
-      background: rgba(15, 23, 42, 0.88);
-      border: 1px solid rgba(244, 63, 94, 0.6);
+      background: rgba(15, 23, 42, 0.92);
+      border: 1.5px solid rgba(244, 63, 94, 0.7);
       color: #fff;
       font-size: 11px;
-      font-weight: 700;
-      padding: 2px 9px;
+      font-weight: 800;
+      padding: 3px 10px;
       border-radius: 999px;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
       white-space: nowrap;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
+      flex-shrink: 0;
     }
 
     /* Speech Bubble for Comments */
     .speech-bubble {
       position: absolute;
-      bottom: 95px;
+      bottom: 108px;
       background: #ffffff;
       color: #0f172a;
       font-size: 13px;
       font-weight: 700;
       padding: 8px 14px;
       border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      min-width: 130px;
       max-width: 260px;
       word-break: break-word;
       animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-      z-index: 30;
+      z-index: 40;
       pointer-events: auto;
+      flex-shrink: 0;
     }
 
     .speech-bubble::after {
@@ -119,12 +127,15 @@
       width: 0;
     }
 
-    /* Avatar Body Container */
+    /* Avatar Body Container - Always fixed crisp size */
     .avatar-body {
-      width: 60px;
-      height: 60px;
+      width: 68px;
+      height: 68px;
+      min-width: 68px;
+      min-height: 68px;
       position: relative;
       animation: walkBounce 0.45s infinite alternate ease-in-out;
+      flex-shrink: 0;
     }
 
     .avatar-sprite {
@@ -361,6 +372,17 @@
       }
       startAvatarWalkCycle();
 
+      // Handle window/OBS resize immediately so characters never get lost off-screen
+      window.addEventListener('resize', () => {
+        const minX = 15;
+        const maxX = Math.max(minX + 30, window.innerWidth - 95);
+        activeAvatars.forEach(av => {
+          if (av.x > maxX) av.x = maxX;
+          if (av.x < minX) av.x = minX;
+          av.el.style.left = `${av.x}px`;
+        });
+      });
+
       // Spawn a brief welcome avatar for 5 seconds so streamer sees it immediately in OBS
       setTimeout(() => {
         const welcome = spawnOrUpdateAvatar("welcome_bot", "RizTik Overlay", "");
@@ -574,7 +596,9 @@
         this.nickname = nickname;
         this.avatarUrl = avatarUrl;
         this.color = getRandomColor(uniqueId);
-        this.x = Math.random() * (window.innerWidth - 140) + 40;
+        const minX = 15;
+        const maxX = Math.max(minX + 30, window.innerWidth - 95);
+        this.x = Math.random() * (maxX - minX) + minX;
         this.speed = (Math.random() * 0.8 + 0.5) * (Math.random() < 0.5 ? 1 : -1);
         this.speechTimeout = null;
         this.lastActive = Date.now();
@@ -602,10 +626,22 @@
       }
 
       updatePosition() {
+        const minX = 15;
+        const maxX = Math.max(minX + 30, window.innerWidth - 95);
+
+        // Instantly bring character back into view if window/OBS was resized smaller
+        if (this.x > maxX) {
+          this.x = maxX;
+          this.speed = -Math.abs(this.speed);
+        } else if (this.x < minX) {
+          this.x = minX;
+          this.speed = Math.abs(this.speed);
+        }
+
         this.x += this.speed;
-        const maxX = window.innerWidth - 90;
-        if (this.x <= 20) {
-          this.x = 20;
+
+        if (this.x <= minX) {
+          this.x = minX;
           this.speed = Math.abs(this.speed);
         } else if (this.x >= maxX) {
           this.x = maxX;
