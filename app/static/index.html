@@ -50,8 +50,14 @@
     <div class="flex items-center flex-wrap gap-2 text-xs">
       <!-- Overlay Shortcut Link -->
       <a href="/overlay" target="_blank" class="px-3 py-1.5 rounded-lg bg-cyan-950/70 border border-cyan-800/80 text-cyan-300 font-semibold hover:bg-cyan-900 transition flex items-center gap-1.5">
-        <span>🎨 Buka Overlay OBS</span>
+        <span>👾 Overlay Karakter</span>
         <span class="text-[10px] text-cyan-400">↗</span>
+      </a>
+
+      <!-- Comments List Shortcut Link -->
+      <a href="/comments" target="_blank" class="px-3 py-1.5 rounded-lg bg-rose-950/70 border border-rose-800/80 text-rose-300 font-semibold hover:bg-rose-900 transition flex items-center gap-1.5">
+        <span>💬 Daftar Komentar</span>
+        <span class="text-[10px] text-rose-400">↗</span>
       </a>
 
       <!-- Admin Status -->
@@ -129,17 +135,41 @@
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 font-semibold">TTS Aktif</span>
         </div>
 
-        <div class="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs space-y-2">
-          <div class="flex justify-between items-center text-slate-300">
-            <span>Link Browser Source OBS:</span>
-            <button onclick="copyOverlayUrl()" class="text-cyan-400 hover:text-cyan-300 text-[11px] font-semibold underline">
-              Salin URL
-            </button>
+        <!-- OBS URLs Box -->
+        <div class="space-y-2.5">
+          <!-- URL 1: Walking Avatars & Balloons -->
+          <div class="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs space-y-2">
+            <div class="flex justify-between items-center text-slate-300">
+              <span class="font-semibold text-cyan-400 flex items-center gap-1.5">
+                <span>👾</span> URL Overlay Karakter & Balon:
+              </span>
+              <button onclick="copyOverlayUrl()" class="text-cyan-400 hover:text-cyan-300 text-[11px] font-semibold underline">
+                Salin URL
+              </button>
+            </div>
+            <div class="bg-slate-900 px-3 py-1.5 rounded-lg font-mono text-[11px] text-cyan-300 select-all border border-slate-800 flex justify-between items-center">
+              <span>http://localhost:8000/overlay</span>
+              <a href="/overlay" target="_blank" class="text-[10px] text-slate-500 hover:text-cyan-400">Buka ↗</a>
+            </div>
+            <p class="text-[10px] text-slate-500">OBS: Add Source (+) ➔ Browser ➔ Width 1920, Height 1080 (Transparan).</p>
           </div>
-          <div class="bg-slate-900 px-3 py-1.5 rounded-lg font-mono text-[11px] text-cyan-300 select-all border border-slate-800">
-            http://localhost:8000/overlay
+
+          <!-- URL 2: Live Comment List -->
+          <div class="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs space-y-2">
+            <div class="flex justify-between items-center text-slate-300">
+              <span class="font-semibold text-rose-400 flex items-center gap-1.5">
+                <span>💬</span> URL Overlay Daftar Komentar Live:
+              </span>
+              <button onclick="copyCommentsUrl()" class="text-rose-400 hover:text-rose-300 text-[11px] font-semibold underline">
+                Salin URL
+              </button>
+            </div>
+            <div class="bg-slate-900 px-3 py-1.5 rounded-lg font-mono text-[11px] text-rose-300 select-all border border-slate-800 flex justify-between items-center">
+              <span>http://localhost:8000/comments</span>
+              <a href="/comments" target="_blank" class="text-[10px] text-slate-500 hover:text-rose-400">Buka ↗</a>
+            </div>
+            <p class="text-[10px] text-slate-500">Format: <b>Nama User : Komentar</b>. Cocok ditempel di samping layar stream OBS.</p>
           </div>
-          <p class="text-[10px] text-slate-500">Tambahkan di OBS: <b>Add Source (+) -> Browser</b>, masukkan URL di atas.</p>
         </div>
 
         <!-- TTS Controls -->
@@ -197,7 +227,7 @@
           <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Uji Coba Visual & Suara OBS</span>
           <div class="grid grid-cols-3 gap-2">
             <button onclick="testOverlayEvent('comment')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-lg text-[11px] font-semibold text-rose-300 transition text-center">
-              💬 Test Suara TTS
+              💬 Test Komentar & TTS
             </button>
             <button onclick="testOverlayEvent('gift')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-lg text-[11px] font-semibold text-amber-300 transition text-center">
               🎈 Test Balon Gift
@@ -594,6 +624,13 @@
       const url = "http://localhost:8000/overlay";
       navigator.clipboard.writeText(url).then(() => {
         alert("Link Overlay berhasil disalin: " + url + "\n\nTempelkan di OBS Studio via Add Source (+) -> Browser!");
+      });
+    }
+
+    function copyCommentsUrl() {
+      const url = "http://localhost:8000/comments";
+      navigator.clipboard.writeText(url).then(() => {
+        alert("Link Overlay Komentar berhasil disalin: " + url + "\n\nTempelkan di OBS Studio via Add Source (+) -> Browser!");
       });
     }
 

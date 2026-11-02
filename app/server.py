@@ -138,6 +138,19 @@ async def get_overlay():
     return {"message": "Overlay UI file not found."}
 
 
+@app.get("/comments")
+@app.get("/chat")
+async def get_comments():
+    comments_path = os.path.join(STATIC_DIR, "comments.html")
+    if os.path.exists(comments_path):
+        response = FileResponse(comments_path)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
+    return {"message": "Comments UI file not found."}
+
+
 @app.get("/api/status")
 async def get_status():
     return {

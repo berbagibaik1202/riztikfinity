@@ -34,8 +34,28 @@ def test_config():
     for r in cfg.rules[:2]:
         print(f"    - {r.id}: {r.trigger_type.value} -> [{r.target_key}] ({r.press_mode.value})")
 
+def test_static_and_routes():
+    print("\nTesting static overlay files...")
+    static_dir = os.path.join(os.path.dirname(__file__), "app", "static")
+    for fname in ["index.html", "overlay.html", "comments.html"]:
+        fpath = os.path.join(static_dir, fname)
+        assert os.path.exists(fpath), f"Missing expected file: {fname}"
+        with open(fpath, "r", encoding="utf-8") as f:
+            content = f.read()
+            assert len(content) > 100, f"File {fname} is too small/empty"
+        print(f"  [OK] {fname} exists ({len(content)} bytes)")
+
+    # Verify server app import and routes
+    from app.server import app
+    routes = [route.path for route in app.routes]
+    print(f"  [OK] Registered FastAPI routes: {routes}")
+    assert "/overlay" in routes, "Missing /overlay route"
+    assert "/comments" in routes, "Missing /comments route"
+    assert "/chat" in routes, "Missing /chat route"
+
 if __name__ == "__main__":
     test_direct_input()
     test_config()
+    test_static_and_routes()
     print("\nAll core tests passed successfully!")
 
