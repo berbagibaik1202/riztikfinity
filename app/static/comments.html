@@ -65,18 +65,16 @@
       pointer-events: none;
     }
 
-    /* Single Comment Item */
+    /* Single Comment Item - Solid high-contrast for OBS */
     .comment-card {
       display: flex;
       align-items: flex-start;
       gap: 10px;
-      background: rgba(15, 23, 42, 0.82);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      padding: 8px 14px;
+      background: rgba(15, 23, 42, 0.96);
+      border: 1.5px solid rgba(255, 255, 255, 0.22);
+      padding: 9px 15px;
       border-radius: 12px;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7);
       animation: slideInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
       transition: opacity 0.5s ease-out, transform 0.5s ease-out;
       width: fit-content;
@@ -155,7 +153,7 @@
   </div>
 
   <!-- Floating Quick Test Button (Klik untuk uji coba kirim komentar) -->
-  <button id="quick-test-btn" onclick="sendTestComment()" style="position: absolute; top: 12px; right: 12px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255, 255, 255, 0.2); color: #e2e8f0; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 999px; cursor: pointer; z-index: 100; backdrop-filter: blur(8px); transition: opacity 0.3s; opacity: 0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'" title="Kirim komentar uji coba">
+  <button id="quick-test-btn" onclick="sendTestComment()" style="position: absolute; top: 12px; right: 12px; background: rgba(30, 41, 59, 0.95); border: 1.5px solid rgba(255, 255, 255, 0.3); color: #f8fafc; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 999px; cursor: pointer; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: transform 0.2s; opacity: 0.85;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.85'" title="Kirim komentar uji coba">
     💬 Uji Kirim Komentar
   </button>
 
