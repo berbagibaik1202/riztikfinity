@@ -515,7 +515,7 @@
           if (overlayConfig.overlay_like_hearts) {
             spawnHeartParticles(data.count || 1);
           }
-          activeAvatars.forEach(av => av.jump());
+          triggerRandomJumps();
           break;
 
         case "follow":
@@ -602,6 +602,24 @@
       return div.innerHTML;
     }
 
+    // Trigger non-simultaneous, staggered organic jumps across active avatars
+    function triggerRandomJumps() {
+      const avatars = Array.from(activeAvatars.values());
+      if (avatars.length === 0) return;
+
+      avatars.forEach(av => {
+        // Stagger each avatar's reaction with its own random delay (20ms to 550ms)
+        if (Math.random() < 0.85) {
+          const delay = Math.floor(Math.random() * 520 + 20);
+          setTimeout(() => {
+            if (activeAvatars.has(av.uniqueId)) {
+              av.jump();
+            }
+          }, delay);
+        }
+      });
+    }
+
     // ==========================================
     // WALKING & FLOATING AVATARS STAGE
     // ==========================================
@@ -626,6 +644,9 @@
         this.targetY = 10;
         this.altitudeTimer = Math.floor(Math.random() * 180 + 90);
         this.floatPhase = Math.random() * Math.PI * 2;
+
+        // Autonomous independent random jump timer (3 to 8 seconds)
+        this.jumpTimer = Math.floor(Math.random() * 300 + 150);
 
         this.speechTimeout = null;
         this.lastActive = Date.now();
@@ -758,19 +779,37 @@
             this.bodyEl.style.transform = "";
           }
         }
+
+        // Autonomous independent random jumps while wandering (not synchronized)
+        this.jumpTimer--;
+        if (this.jumpTimer <= 0) {
+          if (Math.random() < 0.40) {
+            this.jump();
+          }
+          this.jumpTimer = Math.floor(Math.random() * 360 + 200);
+        }
       }
 
       jump() {
-        // Boost upward into the air when user likes or events trigger jump
-        this.targetY = Math.min(this.targetY + 120, window.innerHeight - 170);
-        this.y = Math.min(this.y + 35, window.innerHeight - 170);
-        this.altitudeTimer = 160; // remain floating for a bit
+        // Boost upward into the air with randomized force and height (not all identical)
+        const jumpBoost = Math.random() * 45 + 25; // 25px - 70px
+        const altitudeNudge = Math.random() * 80 + 40; // 40px - 120px
+
+        this.y = Math.min(this.y + jumpBoost, window.innerHeight - 170);
+        this.targetY = Math.min(this.targetY + altitudeNudge, window.innerHeight - 170);
+        this.altitudeTimer = Math.floor(Math.random() * 100 + 80);
+
+        // Slight random horizontal nudge
+        this.vx += (Math.random() - 0.5) * 0.3;
 
         if (this.bodyEl) {
-          this.bodyEl.style.animation = "avatarJump 0.4s ease-out";
+          const animDuration = (Math.random() * 0.12 + 0.34).toFixed(2);
+          this.bodyEl.style.animation = `avatarJump ${animDuration}s ease-out`;
           setTimeout(() => {
-            this.bodyEl.style.animation = "walkBounce 0.45s infinite alternate ease-in-out";
-          }, 450);
+            if (this.bodyEl) {
+              this.bodyEl.style.animation = "walkBounce 0.45s infinite alternate ease-in-out";
+            }
+          }, Math.floor(parseFloat(animDuration) * 1000 + 40));
         }
       }
 
