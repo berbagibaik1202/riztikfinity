@@ -17,11 +17,20 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
 local API_BASE_URL = "http://127.0.0.1:8000"
 local POLL_INTERVAL = 0.35
 local BASE_SPEED = 28
+
+-- RemoteEvent untuk sinyal kamera dinamis & VIP gift fokus
+local cameraRemote = ReplicatedStorage:FindFirstChild("RaceCameraRemote")
+if not cameraRemote then
+    cameraRemote = Instance.new("RemoteEvent")
+    cameraRemote.Name = "RaceCameraRemote"
+    cameraRemote.Parent = ReplicatedStorage
+end
 
 -- State internal balapan
 local isRaceRunning = false
@@ -404,6 +413,17 @@ local function spawnRacerVehicle(racerData)
 
     racers[uid] = racerEntry
     print("🏎️ Racer Spawned:", racerEntry.nickname, "(" .. vType .. ")")
+
+    -- Beri sinyal kamera fokus sesaat ke pembalap yang baru join
+    if cameraRemote then
+        cameraRemote:FireAllClients("GIFT_FOCUS", {
+            userId = racerEntry.userId,
+            nickname = racerEntry.nickname,
+            giftName = "Masuk Arena Balap! 🏁",
+            duration = 4.0
+        })
+    end
+
     return racerEntry
 end
 
@@ -427,6 +447,17 @@ local function applyBoost(racerEntry, multiplier, isTurbo)
         racerEntry.speedBonus = bonus
         racerEntry.bonusTimer = 5.0
         racerEntry.infoLabel.Text = "⚡ BOOST +" .. tostring(multiplier) .. "x!"
+    end
+
+    -- 🎥 PRIORITAS KAMERA: Arahkan kamera langsung ke mobil yang dapat boost/turbo!
+    if cameraRemote then
+        local gName = isTurbo and "Donut (TURBO API)" or ("Mawar (" .. tostring(multiplier) .. "x Boost)")
+        cameraRemote:FireAllClients("GIFT_FOCUS", {
+            userId = racerEntry.userId,
+            nickname = racerEntry.nickname,
+            giftName = gName,
+            duration = 7.5
+        })
     end
 end
 
@@ -461,6 +492,16 @@ local function fireRocket(shooterEntry)
     rocketFire.Size = 3
     rocketFire.Color = Color3.fromRGB(56, 189, 248)
     rocketFire.Parent = rocket
+
+    -- 🎥 PRIORITAS KAMERA: Arahkan kamera langsung ke penembak roket!
+    if cameraRemote then
+        cameraRemote:FireAllClients("GIFT_FOCUS", {
+            userId = shooterEntry.userId,
+            nickname = shooterEntry.nickname,
+            giftName = "Topi (ROKET TEMBAK)",
+            duration = 6.5
+        })
+    end
 
     task.spawn(function()
         local dir = shooterEntry.primaryPart.CFrame.LookVector
@@ -705,7 +746,7 @@ local function setupPlayerHUD(player)
         -- Main Control Frame
         local mainFrame = Instance.new("Frame")
         mainFrame.Name = "MainControls"
-        mainFrame.Size = UDim2.new(0, 480, 0, 120)
+        mainFrame.Size = UDim2.new(0, 580, 0, 120)
         mainFrame.Position = UDim2.new(0.5, 0, 1, -75)
         mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
         mainFrame.BackgroundColor3 = Color3.fromRGB(15, 23, 42)
@@ -836,6 +877,9 @@ local function setupPlayerHUD(player)
             end
             racers = {}
             hideCountdownBanner()
+            if cameraRemote then
+                cameraRemote:FireAllClients("RACE_RESET")
+            end
             pcall(function()
                 HttpService:PostAsync(
                     API_BASE_URL .. "/api/roblox/control",
@@ -843,6 +887,13 @@ local function setupPlayerHUD(player)
                     Enum.HttpContentType.ApplicationJson
                 )
             end)
+        end)
+
+        -- 5. Tombol GANTI SUDUT KAMERA (Belakang / Depan / Samping / Drone)
+        makeButton("🎥 GANTI\nANGLE (C)", Color3.fromRGB(139, 92, 246), function()
+            if cameraRemote then
+                cameraRemote:FireAllClients("CYCLE_ANGLE")
+            end
         end)
 
         -- Toggle hide/show

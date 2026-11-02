@@ -714,6 +714,21 @@
         </p>
       </div>
 
+      <!-- Step 2B -->
+      <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-sm text-purple-400 flex items-center gap-2">
+            <span>🎥</span> Pasang Kamera Sinematik & Fokus Gift (StarterPlayerScripts)
+          </span>
+          <button onclick="copyCameraScript()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs py-1.5 px-3 rounded-lg transition shadow">
+            📋 Salin Script Kamera
+          </button>
+        </div>
+        <p class="text-xs text-slate-300">
+          Di Explorer Roblox Studio, buka <b>StarterPlayer</b> ➔ klik kanan <b>StarterPlayerScripts</b> ➔ <b>Insert Object</b> ➔ <b>LocalScript</b>. Beri nama <code class="text-purple-300 bg-slate-900 px-1 py-0.5 rounded font-mono">LiveRaceCamera</code>, lalu tempel isi script ini. Kamera otomatis menyorot mobil penonton saat gift masuk dan berganti angle dinamis (belakang, depan, drone)!
+        </p>
+      </div>
+
       <!-- Step 3 -->
       <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
         <span class="font-bold text-sm text-amber-400 flex items-center gap-2">
@@ -1499,6 +1514,18 @@
         const code = await res.text();
         await navigator.clipboard.writeText(code);
         alert("✅ Script LiveRaceController berhasil disalin ke Clipboard!\n\nBuat Script baru di ServerScriptService Roblox Studio, lalu paste seluruh isinya.");
+      } catch (e) {
+        alert("Gagal menyalin script: " + e);
+      }
+    }
+
+    async function copyCameraScript() {
+      try {
+        const res = await fetch('/api/roblox/script/camera');
+        if (!res.ok) throw new Error("Gagal mengunduh script kamera");
+        const code = await res.text();
+        await navigator.clipboard.writeText(code);
+        alert("✅ Script LiveRaceCamera berhasil disalin ke Clipboard!\n\nBuat LocalScript di StarterPlayer -> StarterPlayerScripts Roblox Studio, lalu paste seluruh isinya.");
       } catch (e) {
         alert("Gagal menyalin script: " + e);
       }

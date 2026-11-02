@@ -132,6 +132,7 @@ def test_roblox_race():
 
     # Check files exist
     assert os.path.exists("roblox/LiveRaceController.server.lua")
+    assert os.path.exists("roblox/LiveRaceCamera.client.lua")
     assert os.path.exists("roblox/GenerateTrack.lua")
     assert os.path.exists("roblox/README.md")
     print("  [OK] Roblox Luau scripts and documentation confirmed present.")

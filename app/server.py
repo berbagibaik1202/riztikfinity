@@ -605,6 +605,8 @@ async def get_roblox_script(script_name: str):
         fpath = os.path.join(roblox_dir, "GenerateTrack.lua")
     elif script_name == "controller":
         fpath = os.path.join(roblox_dir, "LiveRaceController.server.lua")
+    elif script_name == "camera":
+        fpath = os.path.join(roblox_dir, "LiveRaceCamera.client.lua")
     else:
         raise HTTPException(status_code=404, detail="Script not found")
 

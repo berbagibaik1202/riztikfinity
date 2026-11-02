@@ -177,5 +177,26 @@ end
 
 print("🎉 SIRKUIT BALAP ROBLOX SELESAI DIBUAT DENGAN SUKSES!")
 print("📍 Total Waypoints:", #wpFolder:GetChildren())
+
+-- Pasang Kamera Sinematik Otomatis di StarterPlayerScripts jika belum ada
+local StarterPlayer = game:GetService("StarterPlayer")
+local spScripts = StarterPlayer:FindFirstChild("StarterPlayerScripts")
+if spScripts then
+    local oldCam = spScripts:FindFirstChild("LiveRaceCamera")
+    if oldCam then oldCam:Destroy() end
+    local success, camCode = pcall(function()
+        return game:GetService("HttpService"):GetAsync("http://127.0.0.1:8000/api/roblox/script/camera")
+    end)
+    if success and camCode and #camCode > 100 then
+        local camScript = Instance.new("LocalScript")
+        camScript.Name = "LiveRaceCamera"
+        camScript.Source = camCode
+        camScript.Parent = spScripts
+        print("🎥 Script LiveRaceCamera berhasil otomatis dipasang di StarterPlayerScripts!")
+    else
+        print("💡 Catatan: Jangan lupa pasang script LiveRaceCamera.client.lua di StarterPlayerScripts.")
+    end
+end
+
 print("🚀 Jalankan game (Play/Run F5) dan buka TikInfinity Controller!")
 
