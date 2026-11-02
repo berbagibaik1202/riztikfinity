@@ -1,42 +1,38 @@
 --[[
     =============================================================================
-    ROBLOX LIVE RACE CONTROLLER (TikInfinity Bridge)
+    ROBLOX LIVE RACE CONTROLLER v2.2 (TikInfinity Bridge & In-Game Host HUD)
     =============================================================================
     Letakkan script ini di: ServerScriptService -> Script (Bukan LocalScript)
     
-    Pastikan fitur HTTP Request aktif di Roblox Studio:
-    Home -> Game Settings -> Security -> Aktifkan "Allow HTTP Requests" -> Save!
-    
-    Fitur:
-    1. Polling aksi live dari TikInfinity (http://127.0.0.1:8000/api/roblox/actions).
-    2. Auto-spawn Mobil & Motor sesuai partisipasi penonton (Mawar / chat "ikut").
-    3. Billboard nama & foto penonton di atas kendaraan.
-    4. Navigasi sirkuit otomatis mengikuti waypoints.
-    5. Power-up Mawar (Speed Boost 1x / 5x).
-    6. Power-up Donut (TURBO Api Knalpot).
-    7. Power-up Topi (Tembak ROKET ke lawan di depan hingga terpental/berputar).
-    8. Lap counter & Papan Pemenang (Podium + Kembang Api).
+    Fitur Baru:
+    1. In-Game Host HUD: Tombol kontrol langsung di layar Roblox (Mulai Balap, Tambah, Hapus, Reset).
+    2. Hitungan Mundur Dramatis: 3.. 2.. 1.. GOOO! (Visual teks raksasa + suara revving knalpot).
+    3. Sinkronisasi penuh dengan Web Dashboard TikInfinity (http://127.0.0.1:8000).
+    4. Auto-spawn Mobil & Motor dengan Billboard nama penonton TikTok.
+    5. Power-up Mawar (Boost 1x/5x), Donut (Turbo Api), Topi (Roket Penembak Lawan).
     =============================================================================
 ]]
 
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
 
 local API_BASE_URL = "http://127.0.0.1:8000"
-local POLL_INTERVAL = 0.35 -- detik antar polling
-local BASE_SPEED = 28 -- studs per detik
+local POLL_INTERVAL = 0.35
+local BASE_SPEED = 28
 
 -- State internal balapan
 local isRaceRunning = false
+local isCountingDown = false
 local totalLaps = 3
 local lastActionId = 0
 local racers = {} -- user_id -> table data racer
 local waypoints = {}
-local finishLine = nil
+local vehiclePreference = "mixed"
 
--- Warna-warni cerah untuk kendaraan
+-- Warna-warni cerah kendaraan
 local VEHICLE_COLORS = {
     Color3.fromRGB(244, 63, 94),   -- Merah Rose
     Color3.fromRGB(59, 130, 246),  -- Biru Elektrik
@@ -48,6 +44,13 @@ local VEHICLE_COLORS = {
     Color3.fromRGB(236, 72, 153),  -- Pink Magenta
 }
 
+-- Setup Audio Sederhana (Beep & Horn)
+local countdownSound = Instance.new("Sound")
+countdownSound.Name = "CountdownBeep"
+countdownSound.SoundId = "rbxassetid://9069609204"
+countdownSound.Volume = 1
+countdownSound.Parent = workspace
+
 -- Pastikan folder Waypoints tersedia
 local function setupWaypoints()
     waypoints = {}
@@ -57,7 +60,6 @@ local function setupWaypoints()
         wpFolder.Name = "RaceWaypoints"
         wpFolder.Parent = workspace
         
-        -- Buat 12 titik sirkuit melingkar default jika belum ada sirkuit
         local radiusX = 140
         local radiusZ = 90
         local center = Vector3.new(0, 5, 0)
@@ -77,7 +79,6 @@ local function setupWaypoints()
             node.Parent = wpFolder
             table.insert(waypoints, node)
         end
-        print("🏁 Dibuat 12 waypoints default di Workspace.RaceWaypoints")
     else
         local children = wpFolder:GetChildren()
         table.sort(children, function(a, b) return a.Name < b.Name end)
@@ -96,7 +97,6 @@ local function createCarModel(color)
     local car = Instance.new("Model")
     car.Name = "RacerCar"
 
-    -- Chassis Utama
     local chassis = Instance.new("Part")
     chassis.Name = "PrimaryPart"
     chassis.Size = Vector3.new(7, 2, 12)
@@ -107,7 +107,6 @@ local function createCarModel(color)
     chassis.Parent = car
     car.PrimaryPart = chassis
 
-    -- Atap / Cockpit
     local roof = Instance.new("Part")
     roof.Size = Vector3.new(5.5, 1.8, 6)
     roof.Position = chassis.Position + Vector3.new(0, 1.8, -0.5)
@@ -122,7 +121,6 @@ local function createCarModel(color)
     roofWeld.Part1 = roof
     roofWeld.Parent = chassis
 
-    -- Sayap Belakang (Spoiler Sport)
     local spoiler = Instance.new("Part")
     spoiler.Size = Vector3.new(6.5, 0.4, 1.5)
     spoiler.Position = chassis.Position + Vector3.new(0, 2.2, 5.2)
@@ -135,7 +133,6 @@ local function createCarModel(color)
     spWeld.Part1 = spoiler
     spWeld.Parent = chassis
 
-    -- Knalpot Turbo
     local exhaust = Instance.new("Part")
     exhaust.Name = "Exhaust"
     exhaust.Size = Vector3.new(1.2, 0.6, 0.6)
@@ -158,7 +155,14 @@ local function createCarModel(color)
     fire.Enabled = false
     fire.Parent = exhaust
 
-    -- 4 Roda
+    local smoke = Instance.new("Smoke")
+    smoke.Name = "RevSmoke"
+    smoke.Size = 2
+    smoke.RiseVelocity = 3
+    smoke.Color = Color3.fromRGB(200, 200, 200)
+    smoke.Enabled = false
+    smoke.Parent = exhaust
+
     local wheelOffsets = {
         Vector3.new(3.8, -0.6, 4),
         Vector3.new(-3.8, -0.6, 4),
@@ -188,7 +192,6 @@ local function createMotorcycleModel(color)
     local bike = Instance.new("Model")
     bike.Name = "RacerMotorcycle"
 
-    -- Rangka Utama Motor
     local frame = Instance.new("Part")
     frame.Name = "PrimaryPart"
     frame.Size = Vector3.new(2.2, 2.6, 9)
@@ -199,7 +202,6 @@ local function createMotorcycleModel(color)
     frame.Parent = bike
     bike.PrimaryPart = frame
 
-    -- Tangki & Stang
     local tank = Instance.new("Part")
     tank.Size = Vector3.new(2.4, 1.4, 3.5)
     tank.Position = frame.Position + Vector3.new(0, 1.6, -1.2)
@@ -212,7 +214,6 @@ local function createMotorcycleModel(color)
     tWeld.Part1 = tank
     tWeld.Parent = frame
 
-    -- Stang Handlebar
     local handlebar = Instance.new("Part")
     handlebar.Size = Vector3.new(4.8, 0.4, 0.4)
     handlebar.Position = frame.Position + Vector3.new(0, 2.2, -2.8)
@@ -225,7 +226,6 @@ local function createMotorcycleModel(color)
     hWeld.Part1 = handlebar
     hWeld.Parent = frame
 
-    -- Knalpot Motor
     local exhaust = Instance.new("Part")
     exhaust.Name = "Exhaust"
     exhaust.Size = Vector3.new(0.8, 0.8, 2.5)
@@ -248,7 +248,14 @@ local function createMotorcycleModel(color)
     fire.Enabled = false
     fire.Parent = exhaust
 
-    -- 2 Roda Motor (Depan & Belakang)
+    local smoke = Instance.new("Smoke")
+    smoke.Name = "RevSmoke"
+    smoke.Size = 2
+    smoke.RiseVelocity = 3
+    smoke.Color = Color3.fromRGB(200, 200, 200)
+    smoke.Enabled = false
+    smoke.Parent = exhaust
+
     local wheels = {
         Vector3.new(0, -0.6, -3.8),
         Vector3.new(0, -0.6, 3.8),
@@ -285,7 +292,6 @@ local function spawnRacerVehicle(racerData)
         setupWaypoints()
     end
 
-    -- Hitung posisi start di grid
     local racerIndex = 0
     for _ in pairs(racers) do racerIndex = racerIndex + 1 end
     local color = VEHICLE_COLORS[(racerIndex % #VEHICLE_COLORS) + 1]
@@ -295,16 +301,22 @@ local function spawnRacerVehicle(racerData)
     local trackDir = (nextWP.Position - startWP.Position).Unit
     local rightDir = Vector3.new(-trackDir.Z, 0, trackDir.X).Unit
 
-    -- Urutan grid bertahap (kiri-kanan)
     local row = math.floor(racerIndex / 2)
     local col = (racerIndex % 2 == 0) and -1 or 1
     local spawnPos = startWP.Position - (trackDir * (row * 14)) + (rightDir * (col * 8)) + Vector3.new(0, 3, 0)
     local spawnCFrame = CFrame.lookAt(spawnPos, spawnPos + trackDir)
 
-    -- Buat model Mobil atau Motor
-    local vehicleType = racerData.vehicle or "car"
+    local vType = racerData.vehicle
+    if not vType or (vType ~= "car" and vType ~= "motorcycle") then
+        if vehiclePreference == "mixed" then
+            vType = (racerIndex % 2 == 0) and "car" or "motorcycle"
+        else
+            vType = vehiclePreference
+        end
+    end
+
     local model, primaryPart, exhaust
-    if vehicleType == "motorcycle" then
+    if vType == "motorcycle" then
         model, primaryPart, exhaust = createMotorcycleModel(color)
     else
         model, primaryPart, exhaust = createCarModel(color)
@@ -312,7 +324,6 @@ local function spawnRacerVehicle(racerData)
 
     model:SetPrimaryPartCFrame(spawnCFrame)
 
-    -- Tambahkan BodyGyro & BodyVelocity untuk navigasi halus
     local bg = Instance.new("BodyGyro")
     bg.MaxTorque = Vector3.new(400000, 400000, 400000)
     bg.P = 15000
@@ -324,7 +335,6 @@ local function spawnRacerVehicle(racerData)
     bv.Velocity = Vector3.new(0, 0, 0)
     bv.Parent = primaryPart
 
-    -- Billboard GUI di atas kendaraan
     local bb = Instance.new("BillboardGui")
     bb.Name = "RacerTag"
     bb.Size = UDim2.new(0, 160, 0, 60)
@@ -355,7 +365,7 @@ local function spawnRacerVehicle(racerData)
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.TextSize = 14
     nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    local vIcon = (vehicleType == "motorcycle") and "🏍️ " or "🏎️ "
+    local vIcon = (vType == "motorcycle") and "🏍️ " or "🏎️ "
     nameLabel.Text = vIcon .. tostring(racerData.nickname or uid)
     nameLabel.TextScaled = true
     nameLabel.Parent = bgFrame
@@ -376,7 +386,7 @@ local function spawnRacerVehicle(racerData)
     local racerEntry = {
         userId = uid,
         nickname = racerData.nickname or uid,
-        vehicleType = vehicleType,
+        vehicleType = vType,
         model = model,
         primaryPart = primaryPart,
         exhaust = exhaust,
@@ -393,7 +403,7 @@ local function spawnRacerVehicle(racerData)
     }
 
     racers[uid] = racerEntry
-    print("🏎️ Racer Spawned:", racerEntry.nickname, "(" .. vehicleType .. ")")
+    print("🏎️ Racer Spawned:", racerEntry.nickname, "(" .. vType .. ")")
     return racerEntry
 end
 
@@ -406,7 +416,7 @@ local function applyBoost(racerEntry, multiplier, isTurbo)
     if isTurbo then
         racerEntry.turboActive = true
         racerEntry.speedBonus = 55
-        racerEntry.bonusTimer = 8.0 -- 8 detik turbo
+        racerEntry.bonusTimer = 8.0
         if racerEntry.exhaust then
             local fire = racerEntry.exhaust:FindFirstChild("TurboFire")
             if fire then fire.Enabled = true end
@@ -415,7 +425,7 @@ local function applyBoost(racerEntry, multiplier, isTurbo)
     else
         local bonus = math.min(multiplier * 9, 45)
         racerEntry.speedBonus = bonus
-        racerEntry.bonusTimer = 5.0 -- 5 detik boost
+        racerEntry.bonusTimer = 5.0
         racerEntry.infoLabel.Text = "⚡ BOOST +" .. tostring(multiplier) .. "x!"
     end
 end
@@ -423,7 +433,6 @@ end
 local function fireRocket(shooterEntry)
     if not shooterEntry or not shooterEntry.primaryPart then return end
 
-    -- Cari lawan terdekat di depan penembak
     local targetEntry = nil
     local nearestDist = 999999
     local shooterPos = shooterEntry.primaryPart.Position
@@ -438,7 +447,6 @@ local function fireRocket(shooterEntry)
         end
     end
 
-    -- Buat Proyektil Roket Topi
     local rocket = Instance.new("Part")
     rocket.Name = "RocketTopi"
     rocket.Size = Vector3.new(1.8, 1.8, 4)
@@ -454,7 +462,6 @@ local function fireRocket(shooterEntry)
     rocketFire.Color = Color3.fromRGB(56, 189, 248)
     rocketFire.Parent = rocket
 
-    -- Gerakkan roket ke target atau ke depan
     task.spawn(function()
         local dir = shooterEntry.primaryPart.CFrame.LookVector
         for step = 1, 35 do
@@ -464,18 +471,15 @@ local function fireRocket(shooterEntry)
             end
             rocket.CFrame = CFrame.lookAt(rocket.Position + (dir * 9), rocket.Position + (dir * 18))
             
-            -- Cek collision
             if targetEntry and targetEntry.primaryPart then
                 local hitDist = (rocket.Position - targetEntry.primaryPart.Position).Magnitude
                 if hitDist < 8 then
-                    -- EXPLOSION!
                     local exp = Instance.new("Explosion")
                     exp.Position = targetEntry.primaryPart.Position
                     exp.BlastRadius = 15
                     exp.BlastPressure = 0
                     exp.Parent = workspace
 
-                    -- Buat mobil lawan terpental & berputar (spin out)
                     targetEntry.spinTimer = 2.5
                     targetEntry.speedBonus = -20
                     targetEntry.infoLabel.Text = "💥 TERKENA ROKET! 💫"
@@ -491,13 +495,116 @@ local function fireRocket(shooterEntry)
 end
 
 -- =============================================================================
--- WINNER CELEBRATION (KEMBANG API & PODIUM)
+-- HITUNG MUNDUR (COUNTDOWN 3.. 2.. 1.. GOOO!) DENGAN TAMPILAN RAKSASA
+-- =============================================================================
+local function showCountdownBanner(text, color, scale)
+    for _, player in ipairs(Players:GetPlayers()) do
+        local pGui = player:FindFirstChild("PlayerGui")
+        if pGui then
+            local cGui = pGui:FindFirstChild("RaceCountdownGui")
+            if cGui then
+                local label = cGui:FindFirstChild("CountLabel", true)
+                if label then
+                    label.Text = text
+                    label.TextColor3 = color
+                    label.Visible = true
+                    label.TextTransparency = 0
+                    label.Size = UDim2.new(0, 400 * scale, 0, 180 * scale)
+                end
+            end
+        end
+    end
+end
+
+local function hideCountdownBanner()
+    for _, player in ipairs(Players:GetPlayers()) do
+        local pGui = player:FindFirstChild("PlayerGui")
+        if pGui then
+            local cGui = pGui:FindFirstChild("RaceCountdownGui")
+            if cGui then
+                local label = cGui:FindFirstChild("CountLabel", true)
+                if label then
+                    label.Visible = false
+                end
+            end
+        end
+    end
+end
+
+local function startCountdownSequence()
+    if isCountingDown or isRaceRunning then return end
+    isCountingDown = true
+    isRaceRunning = false
+
+    -- Nyalakan efek asap knalpot revving untuk semua mobil
+    for _, r in pairs(racers) do
+        if r.exhaust then
+            local smoke = r.exhaust:FindFirstChild("RevSmoke")
+            if smoke then smoke.Enabled = true end
+        end
+        if r.bv then r.bv.Velocity = Vector3.new(0, 0, 0) end
+    end
+
+    -- Hitungan 3
+    showCountdownBanner("3", Color3.fromRGB(239, 68, 68), 1.2) -- Merah
+    countdownSound.PlaybackSpeed = 1.0
+    countdownSound:Play()
+    task.wait(1.0)
+
+    -- Hitungan 2
+    showCountdownBanner("2", Color3.fromRGB(245, 158, 11), 1.2) -- Kuning
+    countdownSound.PlaybackSpeed = 1.2
+    countdownSound:Play()
+    task.wait(1.0)
+
+    -- Hitungan 1
+    showCountdownBanner("1", Color3.fromRGB(16, 185, 129), 1.2) -- Hijau
+    countdownSound.PlaybackSpeed = 1.4
+    countdownSound:Play()
+    task.wait(1.0)
+
+    -- 🏁 GOOO!
+    showCountdownBanner("🏁 GOOO! 🏁", Color3.fromRGB(254, 240, 138), 1.4) -- Emas
+    countdownSound.PlaybackSpeed = 2.0
+    countdownSound:Play()
+
+    -- Matikan asap revving dan mulai balapan!
+    for _, r in pairs(racers) do
+        if r.exhaust then
+            local smoke = r.exhaust:FindFirstChild("RevSmoke")
+            if smoke then smoke.Enabled = false end
+        end
+    end
+
+    isRaceRunning = true
+    isCountingDown = false
+    print("🚀 BALAPAN DIMULAI!")
+
+    -- Sinkronkan status aktif ke TikInfinity Server
+    pcall(function()
+        HttpService:PostAsync(
+            API_BASE_URL .. "/api/roblox/state",
+            HttpService:JSONEncode({
+                race_state = "racing",
+                total_laps = totalLaps
+            }),
+            Enum.HttpContentType.ApplicationJson
+        )
+    end)
+
+    task.wait(1.5)
+    hideCountdownBanner()
+end
+
+-- =============================================================================
+-- WINNER CELEBRATION
 -- =============================================================================
 local function announceWinner(winnerEntry)
     isRaceRunning = false
     print("🏆 PEMENANG BALAPAN: " .. winnerEntry.nickname)
 
-    -- Kirim status juara ke TikInfinity Web Server
+    showCountdownBanner("🏆 JUARA: " .. winnerEntry.nickname .. "!", Color3.fromRGB(254, 240, 138), 1.2)
+
     pcall(function()
         HttpService:PostAsync(
             API_BASE_URL .. "/api/roblox/state",
@@ -513,7 +620,6 @@ local function announceWinner(winnerEntry)
         )
     end)
 
-    -- Kembang api di atas mobil pemenang
     task.spawn(function()
         for i = 1, 8 do
             if not winnerEntry.primaryPart then break end
@@ -528,7 +634,229 @@ local function announceWinner(winnerEntry)
             firework.Parent = workspace
             task.wait(0.4)
         end
+        task.wait(4)
+        hideCountdownBanner()
     end)
+end
+
+-- =============================================================================
+-- IN-GAME STREAMER HOST HUD (KONTROL LAYAR ROBLOX)
+-- =============================================================================
+local function setupPlayerHUD(player)
+    local pGui = player:WaitForChild("PlayerGui", 10)
+    if not pGui then return end
+
+    -- 1. Countdown Overlay Gui
+    local cGui = pGui:FindFirstChild("RaceCountdownGui")
+    if not cGui then
+        cGui = Instance.new("ScreenGui")
+        cGui.Name = "RaceCountdownGui"
+        cGui.ResetOnSpawn = false
+        cGui.DisplayOrder = 999
+        cGui.Parent = pGui
+
+        local cLabel = Instance.new("TextLabel")
+        cLabel.Name = "CountLabel"
+        cLabel.Size = UDim2.new(0, 400, 0, 180)
+        cLabel.Position = UDim2.new(0.5, 0, 0.35, 0)
+        cLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+        cLabel.BackgroundTransparency = 1
+        cLabel.Font = Enum.Font.GothamBlack
+        cLabel.Text = ""
+        cLabel.TextScaled = true
+        cLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        cLabel.Visible = false
+        cLabel.Parent = cGui
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 6
+        stroke.Color = Color3.fromRGB(15, 23, 42)
+        stroke.Parent = cLabel
+    end
+
+    -- 2. Streamer Control Panel GUI
+    local hostGui = pGui:FindFirstChild("RaceHostControlGui")
+    if not hostGui then
+        hostGui = Instance.new("ScreenGui")
+        hostGui.Name = "RaceHostControlGui"
+        hostGui.ResetOnSpawn = false
+        hostGui.DisplayOrder = 100
+        hostGui.Parent = pGui
+
+        -- Tombol Minimize Toggle (Pojok Kiri Bawah)
+        local toggleBtn = Instance.new("TextButton")
+        toggleBtn.Name = "ToggleHUD"
+        toggleBtn.Size = UDim2.new(0, 130, 0, 36)
+        toggleBtn.Position = UDim2.new(0, 20, 1, -55)
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(15, 23, 42)
+        toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        toggleBtn.Font = Enum.Font.GothamBold
+        toggleBtn.TextSize = 12
+        toggleBtn.Text = "⚙️ Panel Balap"
+        toggleBtn.Parent = hostGui
+        local tCorner = Instance.new("UICorner")
+        tCorner.CornerRadius = UDim.new(0, 8)
+        tCorner.Parent = toggleBtn
+        local tStroke = Instance.new("UIStroke")
+        tStroke.Color = Color3.fromRGB(244, 63, 94)
+        tStroke.Thickness = 1.5
+        tStroke.Parent = toggleBtn
+
+        -- Main Control Frame
+        local mainFrame = Instance.new("Frame")
+        mainFrame.Name = "MainControls"
+        mainFrame.Size = UDim2.new(0, 480, 0, 120)
+        mainFrame.Position = UDim2.new(0.5, 0, 1, -75)
+        mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(15, 23, 42)
+        mainFrame.BackgroundTransparency = 0.1
+        mainFrame.BorderSizePixel = 0
+        mainFrame.Parent = hostGui
+
+        local mfCorner = Instance.new("UICorner")
+        mfCorner.CornerRadius = UDim.new(0, 12)
+        mfCorner.Parent = mainFrame
+        local mfStroke = Instance.new("UIStroke")
+        mfStroke.Color = Color3.fromRGB(56, 189, 248)
+        mfStroke.Thickness = 2
+        mfStroke.Parent = mainFrame
+
+        -- Judul Panel
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1, -20, 0, 24)
+        title.Position = UDim2.new(0, 10, 0, 6)
+        title.BackgroundTransparency = 1
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 12
+        title.TextColor3 = Color3.fromRGB(226, 232, 240)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Text = "🏎️ TIKTOK LIVE RACE HOST CONTROLS"
+        title.Parent = mainFrame
+
+        -- Baris Tombol Aksi
+        local buttonContainer = Instance.new("Frame")
+        buttonContainer.Size = UDim2.new(1, -20, 0, 75)
+        buttonContainer.Position = UDim2.new(0, 10, 0, 35)
+        buttonContainer.BackgroundTransparency = 1
+        buttonContainer.Parent = mainFrame
+
+        local uilayout = Instance.new("UIListLayout")
+        uilayout.FillDirection = Enum.FillDirection.Horizontal
+        uilayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        uilayout.Padding = UDim.new(0, 8)
+        uilayout.Parent = buttonContainer
+
+        -- Helper pembuat tombol
+        local function makeButton(text, bgCol, callback)
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(0, 105, 0, 68)
+            btn.BackgroundColor3 = bgCol
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Font = Enum.Font.GothamBold
+            btn.TextSize = 12
+            btn.Text = text
+            btn.TextWrapped = true
+            btn.Parent = buttonContainer
+            local bCorner = Instance.new("UICorner")
+            bCorner.CornerRadius = UDim.new(0, 10)
+            bCorner.Parent = btn
+
+            btn.MouseButton1Click:Connect(callback)
+            return btn
+        end
+
+        -- 1. Tombol MULAI BALAP (3.. 2.. 1.. GO!)
+        makeButton("🚀 MULAI\n(3.. 2.. 1.. GO!)", Color3.fromRGB(16, 185, 129), function()
+            startCountdownSequence()
+        end)
+
+        -- 2. Tombol TAMBAH PEMBALAP BOT
+        makeButton("➕ TAMBAH\nPEMBALAP", Color3.fromRGB(59, 130, 246), function()
+            local botIndex = 0
+            for _ in pairs(racers) do botIndex = botIndex + 1 end
+            local sampleNames = {"Rizky_Speed", "Budi_Gamer", "Nabila_Racer", "Siti_Turbo", "Aldi_Pro", "Chibi_Star"}
+            local name = sampleNames[(botIndex % #sampleNames) + 1] .. "_" .. tostring(math.random(10, 99))
+            local racer = spawnRacerVehicle({
+                user_id = name:lower(),
+                nickname = name,
+                vehicle = vehiclePreference
+            })
+            pcall(function()
+                HttpService:PostAsync(
+                    API_BASE_URL .. "/api/roblox/test-action",
+                    HttpService:JSONEncode({
+                        test_type = "join_rose",
+                        nickname = name
+                    }),
+                    Enum.HttpContentType.ApplicationJson
+                )
+            end)
+        end)
+
+        -- 3. Tombol RESET KE GARIS START
+        makeButton("🔄 RESET\nSTART", Color3.fromRGB(71, 85, 105), function()
+            isRaceRunning = false
+            local rIdx = 0
+            for _, r in pairs(racers) do
+                r.lap = 1
+                r.currentWP = 1
+                r.speedBonus = 0
+                r.bonusTimer = 0
+                r.spinTimer = 0
+                r.infoLabel.Text = "🏁 Lap 1/" .. tostring(totalLaps)
+                
+                local startWP = waypoints[1]
+                if startWP and r.primaryPart then
+                    local trackDir = Vector3.new(1, 0, 0)
+                    if waypoints[2] then trackDir = (waypoints[2].Position - startWP.Position).Unit end
+                    local rightDir = Vector3.new(-trackDir.Z, 0, trackDir.X).Unit
+                    local row = math.floor(rIdx / 2)
+                    local col = (rIdx % 2 == 0) and -1 or 1
+                    local p = startWP.Position - (trackDir * (row * 14)) + (rightDir * (col * 8)) + Vector3.new(0, 3, 0)
+                    r.primaryPart.CFrame = CFrame.lookAt(p, p + trackDir)
+                    if r.bv then r.bv.Velocity = Vector3.new(0, 0, 0) end
+                end
+                rIdx = rIdx + 1
+            end
+            hideCountdownBanner()
+            pcall(function()
+                HttpService:PostAsync(
+                    API_BASE_URL .. "/api/roblox/control",
+                    HttpService:JSONEncode({ action = "reset" }),
+                    Enum.HttpContentType.ApplicationJson
+                )
+            end)
+        end)
+
+        -- 4. Tombol HAPUS SEMUA PEMBALAP
+        makeButton("🧹 HAPUS\nSEMUA", Color3.fromRGB(225, 29, 72), function()
+            isRaceRunning = false
+            for _, r in pairs(racers) do
+                if r.model then r.model:Destroy() end
+            end
+            racers = {}
+            hideCountdownBanner()
+            pcall(function()
+                HttpService:PostAsync(
+                    API_BASE_URL .. "/api/roblox/control",
+                    HttpService:JSONEncode({ action = "clear" }),
+                    Enum.HttpContentType.ApplicationJson
+                )
+            end)
+        end)
+
+        -- Toggle hide/show
+        toggleBtn.MouseButton1Click:Connect(function()
+            mainFrame.Visible = not mainFrame.Visible
+            toggleBtn.Text = mainFrame.Visible and "⚙️ Sembunyikan" or "⚙️ Buka Panel"
+        end)
+    end
+end
+
+-- Pasang HUD untuk setiap player yang bermain / baru masuk
+Players.PlayerAdded:Connect(setupPlayerHUD)
+for _, p in ipairs(Players:GetPlayers()) do
+    setupPlayerHUD(p)
 end
 
 -- =============================================================================
@@ -539,7 +867,6 @@ RunService.Heartbeat:Connect(function(dt)
 
     for uid, racer in pairs(racers) do
         if racer.primaryPart and racer.bg and racer.bv then
-            -- Hitung bonus timer
             if racer.bonusTimer > 0 then
                 racer.bonusTimer = racer.bonusTimer - dt
                 if racer.bonusTimer <= 0 then
@@ -553,13 +880,11 @@ RunService.Heartbeat:Connect(function(dt)
                 end
             end
 
-            -- Hitung spin timer (akibat roket)
             if racer.spinTimer > 0 then
                 racer.spinTimer = racer.spinTimer - dt
                 racer.bg.CFrame = racer.bg.CFrame * CFrame.Angles(0, math.rad(45), 0)
                 racer.bv.Velocity = Vector3.new(0, 0, 0)
             else
-                -- Navigasi ke waypoint berikutnya
                 local targetWP = waypoints[racer.currentWP]
                 if targetWP then
                     local targetPos = targetWP.Position + Vector3.new(0, 3, 0)
@@ -567,7 +892,6 @@ RunService.Heartbeat:Connect(function(dt)
                     local toTarget = (targetPos - currentPos)
                     local dist = toTarget.Magnitude
 
-                    -- Jika sudah dekat dengan waypoint, lanjut ke WP berikutnya
                     if dist < 14 then
                         racer.currentWP = racer.currentWP + 1
                         if racer.currentWP > #waypoints then
@@ -582,7 +906,6 @@ RunService.Heartbeat:Connect(function(dt)
                         end
                     end
 
-                    -- Arahkan haluan ke waypoint
                     local moveDir = toTarget.Unit
                     local speed = math.max(10, BASE_SPEED + racer.speedBonus)
                     racer.bv.Velocity = moveDir * speed
@@ -628,12 +951,13 @@ local function pollServer()
                         fireRocket(racer)
 
                     elseif act == "start_race" then
-                        isRaceRunning = true
                         totalLaps = payload.total_laps or 3
-                        print("🚀 BALAPAN RESMI DIMULAI! Total Lap:", totalLaps)
+                        startCountdownSequence()
 
                     elseif act == "reset_race" then
                         isRaceRunning = false
+                        isCountingDown = false
+                        hideCountdownBanner()
                         if payload.clear_racers then
                             for _, r in pairs(racers) do
                                 if r.model then r.model:Destroy() end
@@ -641,7 +965,6 @@ local function pollServer()
                             racers = {}
                             print("🧹 Arena Balap Dikosongkan.")
                         else
-                            -- Reset ke grid start
                             local rIdx = 0
                             for _, r in pairs(racers) do
                                 r.lap = 1
@@ -660,6 +983,7 @@ local function pollServer()
                                     local col = (rIdx % 2 == 0) and -1 or 1
                                     local p = startWP.Position - (trackDir * (row * 14)) + (rightDir * (col * 8)) + Vector3.new(0, 3, 0)
                                     r.primaryPart.CFrame = CFrame.lookAt(p, p + trackDir)
+                                    if r.bv then r.bv.Velocity = Vector3.new(0, 0, 0) end
                                 end
                                 rIdx = rIdx + 1
                             end
@@ -676,7 +1000,7 @@ end
 -- INTI RUNNER
 -- =============================================================================
 setupWaypoints()
-print("🏎️ [TikInfinity] Roblox Live Race Controller Aktif & Menunggu Event...")
+print("🏎️ [TikInfinity] Roblox Live Race Controller v2.2 Aktif!")
 
 task.spawn(function()
     while true do
@@ -684,4 +1008,3 @@ task.spawn(function()
         task.wait(POLL_INTERVAL)
     end
 end)
-
