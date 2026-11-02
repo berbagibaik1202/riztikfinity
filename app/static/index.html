@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Live Game Controller (TikFinity Bridge)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              500: '#ff0050',
+              600: '#e00045',
+              dark: '#00f2fe'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbar for terminal */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #111827; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-rose-500 selection:text-white">
+
+  <!-- TOP HEADER -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 via-pink-500 to-cyan-400 flex items-center justify-center font-black text-xl shadow-lg shadow-rose-950/40">
+        🎮
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+          TikTok Live Game Controller
+          <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 font-mono">v1.1</span>
+        </h1>
+        <p class="text-xs text-slate-400">DirectInput Bridge for Roblox & DirectX Games</p>
+      </div>
+    </div>
+
+    <!-- STATUS INDICATORS -->
+    <div class="flex items-center flex-wrap gap-2 text-xs">
+      <!-- Admin Status -->
+      <span id="badge-admin" class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 flex items-center gap-1.5 font-medium">
+        <span class="w-2 h-2 rounded-full bg-amber-400"></span> Checking Admin...
+      </span>
+
+      <!-- Active Window Status -->
+      <span id="badge-roblox" class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 flex items-center gap-1.5 font-medium">
+        <span class="w-2 h-2 rounded-full bg-slate-500"></span> Roblox: Mencari...
+      </span>
+
+      <!-- TikTok Connection Status -->
+      <span id="badge-tiktok" class="px-3 py-1 rounded-md bg-rose-950/60 border border-rose-800/80 text-rose-300 flex items-center gap-2 font-medium">
+        <span class="relative flex h-2 w-2">
+          <span id="ping-circle" class="hidden animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span id="dot-circle" class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+        </span>
+        <span id="text-tiktok-status">Disconnected</span>
+      </span>
+
+      <!-- Emergency Panic Button -->
+      <button onclick="emergencyStop()" class="ml-2 px-3 py-1.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold rounded-lg shadow-lg shadow-red-900/50 flex items-center gap-1.5 transition">
+        🚨 Emergency Stop
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1600px] w-full mx-auto">
+    
+    <!-- LEFT PANEL: TIKTOK CONNECTION & TESTER (4 COLS) -->
+    <section class="lg:col-span-4 flex flex-col gap-6">
+      
+      <!-- Connection Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+          📡 TikTok Live Streamer Pairing
+        </h2>
+        
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Streamer TikTok Username</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 font-bold">@</span>
+              <input type="text" id="input-username" placeholder="contoh: nana.perm12" class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:border-rose-500 transition">
+            </div>
+            <p class="text-[11px] text-slate-500 mt-1">Langsung mendengarkan server TikTok. Tidak perlu koneksi ke TikTok Studio.</p>
+          </div>
+
+          <div class="flex gap-2">
+            <button id="btn-connect" onclick="connectTikTok()" class="flex-1 bg-rose-600 hover:bg-rose-500 active:scale-95 py-2.5 px-4 rounded-xl font-semibold text-sm text-white shadow-md shadow-rose-950/50 transition">
+              Connect Live
+            </button>
+            <button id="btn-disconnect" onclick="disconnectTikTok()" class="hidden flex-1 bg-slate-800 hover:bg-slate-700 active:scale-95 py-2.5 px-4 rounded-xl font-semibold text-sm text-slate-300 transition">
+              Disconnect
+            </button>
+          </div>
+
+          <div id="room-info" class="hidden p-3 bg-slate-950/70 border border-slate-800/80 rounded-xl text-xs space-y-1">
+            <div class="flex justify-between text-slate-400">
+              <span>Room ID:</span>
+              <span id="room-id-val" class="font-mono text-cyan-400 font-semibold">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick DirectInput Key Tester -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+        <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3 flex items-center justify-between">
+          <span>🎯 Test DirectInput Keys</span>
+          <span class="text-[11px] text-slate-500 lowercase font-normal">PyDirectInput Engine</span>
+        </h2>
+        <p class="text-xs text-slate-400 mb-4">Uji penekanan tombol langsung ke Roblox (Roblox otomatis difokuskan).</p>
+        
+        <!-- Preset Key Grid -->
+        <div class="grid grid-cols-4 gap-2 mb-4">
+          <button onclick="testKey('w', 'hold', 0.4)" class="bg-slate-800 hover:bg-slate-700 active:bg-rose-600 p-2.5 rounded-xl font-mono font-bold text-center border border-slate-700 transition">
+            W <span class="block text-[10px] text-slate-400 font-sans font-normal">Maju</span>
+          </button>
+          <button onclick="testKey('a', 'hold', 0.4)" class="bg-slate-800 hover:bg-slate-700 active:bg-rose-600 p-2.5 rounded-xl font-mono font-bold text-center border border-slate-700 transition">
+            A <span class="block text-[10px] text-slate-400 font-sans font-normal">Kiri</span>
+          </button>
+          <button onclick="testKey('s', 'hold', 0.4)" class="bg-slate-800 hover:bg-slate-700 active:bg-rose-600 p-2.5 rounded-xl font-mono font-bold text-center border border-slate-700 transition">
+            S <span class="block text-[10px] text-slate-400 font-sans font-normal">Mundur</span>
+          </button>
+          <button onclick="testKey('d', 'hold', 0.4)" class="bg-slate-800 hover:bg-slate-700 active:bg-rose-600 p-2.5 rounded-xl font-mono font-bold text-center border border-slate-700 transition">
+            D <span class="block text-[10px] text-slate-400 font-sans font-normal">Kanan</span>
+          </button>
+          <button onclick="testKey('space', 'tap', 0.15)" class="col-span-2 bg-slate-800 hover:bg-slate-700 active:bg-rose-600 p-2.5 rounded-xl font-mono font-bold text-center border border-slate-700 transition">
+            SPACE <span class="block text-[10px] text-slate-400 font-sans font-normal">Lompat</span>
+          </button>
+          <button onclick="testKey('shift', 'hold', 0.5)" class="col-span-2 bg-slate-800 hover:bg-slate-700 active:bg-rose-600 p-2.5 rounded-xl font-mono font-bold text-center border border-slate-700 transition">
+            SHIFT <span class="block text-[10px] text-slate-400 font-sans font-normal">Sprint</span>
+          </button>
+        </div>
+
+        <!-- Custom Key Test Input -->
+        <div class="flex gap-2">
+          <input type="text" id="custom-test-key" placeholder="Key (e.g. w, space, e)" class="w-28 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-center font-mono focus:border-rose-500 focus:outline-none">
+          <select id="custom-test-mode" class="bg-slate-950 border border-slate-800 rounded-xl px-2 py-1.5 text-xs text-slate-300 focus:outline-none">
+            <option value="hold">Hold (0.4s)</option>
+            <option value="tap">Tap (0.15s)</option>
+          </select>
+          <button onclick="testCustomKey()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-xs font-semibold py-1.5 rounded-xl border border-slate-700 transition">
+            Test Send
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings & Focus Guard -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-3">
+        <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-2">⚙️ Pengaturan Kontrol Roblox</h2>
+        
+        <label class="flex items-center justify-between cursor-pointer">
+          <div>
+            <span class="text-xs text-slate-200 font-medium block">Auto-Focus Jendela Roblox</span>
+            <span class="text-[10px] text-slate-400">Bawa Roblox ke depan otomatis saat tombol dipicu (Disarankan)</span>
+          </div>
+          <input type="checkbox" id="check-auto-focus" onchange="saveSettings()" class="w-4 h-4 rounded text-rose-600 bg-slate-950 border-slate-800 focus:ring-0">
+        </label>
+
+        <label class="flex items-center justify-between cursor-pointer pt-2 border-t border-slate-800/80">
+          <div>
+            <span class="text-xs text-slate-300 block">Lewati jika Roblox tidak fokus</span>
+            <span class="text-[10px] text-slate-500">Hanya kirim input jika Roblox sedang aktif</span>
+          </div>
+          <input type="checkbox" id="check-require-focus" onchange="saveSettings()" class="w-4 h-4 rounded text-rose-600 bg-slate-950 border-slate-800 focus:ring-0">
+        </label>
+
+        <div class="flex items-center justify-between text-xs pt-2 border-t border-slate-800/80">
+          <span class="text-slate-300">Batas Maksimal Antrean (Throttling)</span>
+          <span id="queue-size-display" class="font-mono text-rose-400 font-bold">50</span>
+        </div>
+        <input type="range" id="input-queue-size" min="10" max="200" step="10" value="50" oninput="document.getElementById('queue-size-display').innerText=this.value" onchange="saveSettings()" class="w-full accent-rose-500 bg-slate-950 rounded-lg cursor-pointer">
+      </div>
+
+    </section>
+
+    <!-- RIGHT PANEL: RULES MANAGER & LIVE CONSOLE (8 COLS) -->
+    <section class="lg:col-span-8 flex flex-col gap-6">
+
+      <!-- Action Rules Section -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
+        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">⚡ Action Mapping Rules</h2>
+            <p class="text-xs text-slate-400">Aturan pemicu event TikTok Live (Gift, Like tap layar, Chat).</p>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="openNewRuleModal()" class="bg-rose-600 hover:bg-rose-500 text-xs font-bold py-2 px-3.5 rounded-xl text-white shadow-md transition flex items-center gap-1.5">
+              + Tambah Rule
+            </button>
+          </div>
+        </div>
+
+        <!-- Rules Table -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+                <th class="py-2.5 px-3">Status</th>
+                <th class="py-2.5 px-3">Tipe Trigger</th>
+                <th class="py-2.5 px-3">Target / Filter</th>
+                <th class="py-2.5 px-3">Tombol</th>
+                <th class="py-2.5 px-3">Aksi</th>
+                <th class="py-2.5 px-3">Combo</th>
+                <th class="py-2.5 px-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="rules-table-body" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Realtime Log Terminal -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm flex-1 flex flex-col min-h-[300px]">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">📜 Live Event Terminal</h2>
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+          </div>
+          <div class="flex items-center gap-3 text-xs">
+            <label class="flex items-center gap-1.5 text-slate-400 cursor-pointer">
+              <input type="checkbox" id="auto-scroll" checked class="rounded text-rose-500 bg-slate-950 border-slate-800">
+              Auto-scroll
+            </label>
+            <button onclick="clearLogs()" class="text-slate-400 hover:text-slate-200 transition">
+              Bersihkan Log
+            </button>
+          </div>
+        </div>
+
+        <!-- Terminal Window -->
+        <div id="terminal-logs" class="flex-1 bg-slate-950 border border-slate-800 rounded-xl p-3.5 font-mono text-[11px] overflow-y-auto space-y-1.5 max-h-[350px]">
+          <div class="text-slate-500 italic">[System] Terminal ready. Menunggu koneksi TikTok Live...</div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- MODAL: ADD / EDIT RULE -->
+  <div id="rule-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-base text-white">Tambah Aturan Baru</h3>
+        <button onclick="closeRuleModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1">Tipe Pemicu (Trigger)</label>
+          <select id="modal-trigger-type" onchange="toggleTriggerInputs()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-rose-500">
+            <option value="like">Milestone Likes (Tap Layar)</option>
+            <option value="gift">Gift TikTok</option>
+            <option value="chat">Chat Command</option>
+          </select>
+        </div>
+
+        <div id="input-container-like">
+          <label class="block text-slate-400 mb-1">Setiap Kelipatan Like (Tap Layar)</label>
+          <input type="number" id="modal-like-count" placeholder="5" value="5" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-rose-500">
+        </div>
+
+        <div id="input-container-gift" class="hidden">
+          <label class="block text-slate-400 mb-1">Nama Gift TikTok (contoh: Rose, Doughnut, Whale)</label>
+          <input type="text" id="modal-gift-name" placeholder="Rose" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-rose-500">
+        </div>
+
+        <div id="input-container-chat" class="hidden">
+          <label class="block text-slate-400 mb-1">Pesan Chat (contoh: !lompat, !kiri, maju)</label>
+          <input type="text" id="modal-chat-cmd" placeholder="!lompat" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-rose-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">Tombol Target Keyboard</label>
+            <input type="text" id="modal-target-key" placeholder="w, space, shift, dll." value="w" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 font-mono focus:outline-none focus:border-rose-500">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Mode Tekan</label>
+            <select id="modal-press-mode" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-rose-500">
+              <option value="hold">Hold (Tahan - Disarankan)</option>
+              <option value="tap">Tap (Tekan Lepas)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">Durasi (Detik)</label>
+            <input type="number" id="modal-duration" step="0.05" value="0.4" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-rose-500">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Cooldown (Detik)</label>
+            <input type="number" id="modal-cooldown" step="0.05" value="0.1" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-rose-500">
+          </div>
+        </div>
+
+        <label class="flex items-center gap-2 pt-2 cursor-pointer">
+          <input type="checkbox" id="modal-multiplier" checked class="rounded text-rose-500 bg-slate-950 border-slate-800">
+          <span class="text-slate-300">Aktifkan Combo Multiplier (durasi bertambah saat combo)</span>
+        </label>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-3 border-t border-slate-800">
+        <button onclick="closeRuleModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition">Batal</button>
+        <button onclick="saveNewRule()" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-500 transition">Simpan Aturan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let appRules = [];
+    let ws = null;
+
+    // Load initial data
+    window.addEventListener('DOMContentLoaded', async () => {
+      await fetchStatus();
+      await fetchRules();
+      initWebSocket();
+      setInterval(fetchStatus, 3000);
+    });
+
+    function initWebSocket() {
+      const loc = window.location;
+      const wsUri = (loc.protocol === "https:" ? "wss://" : "ws://") + loc.host + "/ws";
+      ws = new WebSocket(wsUri);
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "log") {
+            appendLog(msg.data);
+          } else if (msg.type === "state" || msg.type === "init") {
+            updateConnectionUI(msg.data.state, msg.data.room_id, msg.data.user);
+          }
+        } catch (e) {
+          console.error("WS error:", e);
+        }
+      };
+
+      ws.onclose = () => {
+        setTimeout(initWebSocket, 2000);
+      };
+    }
+
+    async function fetchStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        
+        // Admin badge
+        const adminBadge = document.getElementById('badge-admin');
+        if (data.is_admin) {
+          adminBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Admin Mode`;
+          adminBadge.className = "px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-800 text-emerald-300 flex items-center gap-1.5 font-medium";
+        } else {
+          adminBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> Bukan Admin (Buka via Run as Admin)`;
+          adminBadge.className = "px-2.5 py-1 rounded-md bg-amber-950/60 border border-amber-800 text-amber-300 flex items-center gap-1.5 font-medium";
+        }
+
+        // Active window badge
+        const robloxBadge = document.getElementById('badge-roblox');
+        if (data.is_roblox_focused) {
+          robloxBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> Roblox Fokus`;
+          robloxBadge.className = "px-2.5 py-1 rounded-md bg-emerald-950/60 border border-emerald-800 text-emerald-300 flex items-center gap-1.5 font-medium";
+        } else if (data.roblox_running) {
+          robloxBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-cyan-400"></span> Roblox Terdeteksi (Ready)`;
+          robloxBadge.className = "px-2.5 py-1 rounded-md bg-cyan-950/60 border border-cyan-800 text-cyan-300 flex items-center gap-1.5 font-medium";
+        } else {
+          const shortTitle = (data.active_window || "Roblox belum aktif").substring(0, 18);
+          robloxBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-500"></span> ${shortTitle}`;
+          robloxBadge.className = "px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-400 flex items-center gap-1.5 font-medium";
+        }
+
+        updateConnectionUI(data.tiktok_state, data.room_id, data.tiktok_user);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function updateConnectionUI(state, roomId, user) {
+      const textStatus = document.getElementById('text-tiktok-status');
+      const pingCircle = document.getElementById('ping-circle');
+      const dotCircle = document.getElementById('dot-circle');
+      const btnConnect = document.getElementById('btn-connect');
+      const btnDisconnect = document.getElementById('btn-disconnect');
+      const roomInfo = document.getElementById('room-info');
+      const roomIdVal = document.getElementById('room-id-val');
+
+      if (state === 'connected') {
+        textStatus.innerText = `Connected (@${user})`;
+        pingCircle.classList.remove('hidden');
+        dotCircle.className = "relative inline-flex rounded-full h-2 w-2 bg-emerald-400";
+        btnConnect.classList.add('hidden');
+        btnDisconnect.classList.remove('hidden');
+        roomInfo.classList.remove('hidden');
+        roomIdVal.innerText = roomId || 'Online';
+      } else if (state === 'connecting') {
+        textStatus.innerText = 'Connecting...';
+        pingCircle.classList.add('hidden');
+        dotCircle.className = "relative inline-flex rounded-full h-2 w-2 bg-amber-400";
+        btnConnect.disabled = true;
+      } else {
+        textStatus.innerText = 'Disconnected';
+        pingCircle.classList.add('hidden');
+        dotCircle.className = "relative inline-flex rounded-full h-2 w-2 bg-rose-500";
+        btnConnect.classList.remove('hidden');
+        btnConnect.disabled = false;
+        btnDisconnect.classList.add('hidden');
+        roomInfo.classList.add('hidden');
+      }
+    }
+
+    async function fetchRules() {
+      try {
+        const res = await fetch('/api/rules');
+        const data = await res.json();
+        appRules = data.rules || [];
+        document.getElementById('input-username').value = data.tiktok_username || "";
+        document.getElementById('check-auto-focus').checked = data.auto_focus_roblox !== false;
+        document.getElementById('check-require-focus').checked = !!data.require_roblox_focus;
+        document.getElementById('input-queue-size').value = data.max_queue_size;
+        document.getElementById('queue-size-display').innerText = data.max_queue_size;
+        renderRules();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderRules() {
+      const tbody = document.getElementById('rules-table-body');
+      tbody.innerHTML = '';
+
+      if (appRules.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-4 text-center text-slate-500">Belum ada aturan aktif. Klik Tambah Rule.</td></tr>`;
+        return;
+      }
+
+      appRules.forEach((rule, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition";
+        
+        let targetDesc = "-";
+        if (rule.trigger_type === 'gift') targetDesc = `🎁 ${rule.gift_name}`;
+        else if (rule.trigger_type === 'chat') targetDesc = `💬 "${rule.chat_command}"`;
+        else if (rule.trigger_type === 'like') targetDesc = `❤️ Tiap ${rule.like_count}x Tap`;
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3">
+            <input type="checkbox" ${rule.enabled ? 'checked' : ''} onchange="toggleRuleEnabled(${idx})" class="rounded text-rose-500 bg-slate-950 border-slate-800">
+          </td>
+          <td class="py-2.5 px-3 uppercase text-[10px] text-slate-400">${rule.trigger_type}</td>
+          <td class="py-2.5 px-3 font-semibold text-rose-300">${targetDesc}</td>
+          <td class="py-2.5 px-3 font-mono font-bold text-cyan-400 bg-slate-950/40 rounded px-1.5 py-0.5">${rule.target_key.toUpperCase()}</td>
+          <td class="py-2.5 px-3">${rule.press_mode.toUpperCase()} (${rule.duration_seconds}s)</td>
+          <td class="py-2.5 px-3 text-slate-400">${rule.multiplier_enabled ? '✅ Ya' : '❌ Tidak'}</td>
+          <td class="py-2.5 px-3 text-right">
+            <button onclick="deleteRule(${idx})" class="text-rose-400 hover:text-rose-300 text-xs px-2 py-1 rounded bg-rose-950/30 hover:bg-rose-900/40">Hapus</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function toggleRuleEnabled(idx) {
+      appRules[idx].enabled = !appRules[idx].enabled;
+      await saveCurrentConfig();
+    }
+
+    async function deleteRule(idx) {
+      appRules.splice(idx, 1);
+      renderRules();
+      await saveCurrentConfig();
+    }
+
+    async function saveCurrentConfig() {
+      const payload = {
+        require_roblox_focus: document.getElementById('check-require-focus').checked,
+        auto_focus_roblox: document.getElementById('check-auto-focus').checked,
+        max_queue_size: parseInt(document.getElementById('input-queue-size').value, 10),
+        rules: appRules
+      };
+      await fetch('/api/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    async function saveSettings() {
+      await saveCurrentConfig();
+    }
+
+    function appendLog(log) {
+      const terminal = document.getElementById('terminal-logs');
+      const line = document.createElement('div');
+      
+      let levelColor = "text-slate-400";
+      if (log.level === "INFO") levelColor = "text-cyan-400";
+      if (log.level === "ACTION") levelColor = "text-emerald-400 font-bold";
+      if (log.level === "WARNING") levelColor = "text-amber-400";
+      if (log.level === "ERROR") levelColor = "text-rose-400 font-bold";
+
+      line.innerHTML = `<span class="text-slate-600">[${log.time}]</span> <span class="${levelColor}">[${log.level}]</span> ${log.message}`;
+      terminal.appendChild(line);
+
+      if (document.getElementById('auto-scroll').checked) {
+        terminal.scrollTop = terminal.scrollHeight;
+      }
+    }
+
+    function clearLogs() {
+      document.getElementById('terminal-logs').innerHTML = '';
+    }
+
+    async function connectTikTok() {
+      const username = document.getElementById('input-username').value.trim();
+      if (!username) {
+        alert("Masukkan username streamer TikTok terlebih dahulu!");
+        return;
+      }
+      await fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+    }
+
+    async function disconnectTikTok() {
+      await fetch('/api/disconnect', { method: 'POST' });
+    }
+
+    async function testKey(key, mode, duration) {
+      await fetch('/api/test-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, mode, duration })
+      });
+    }
+
+    async function testCustomKey() {
+      const key = document.getElementById('custom-test-key').value.trim();
+      const mode = document.getElementById('custom-test-mode').value;
+      if (!key) return;
+      await testKey(key, mode, mode === 'hold' ? 0.4 : 0.15);
+    }
+
+    async function emergencyStop() {
+      await fetch('/api/emergency-stop', { method: 'POST' });
+    }
+
+    function openNewRuleModal() {
+      document.getElementById('rule-modal').classList.remove('hidden');
+    }
+
+    function closeRuleModal() {
+      document.getElementById('rule-modal').classList.add('hidden');
+    }
+
+    function toggleTriggerInputs() {
+      const type = document.getElementById('modal-trigger-type').value;
+      document.getElementById('input-container-like').classList.toggle('hidden', type !== 'like');
+      document.getElementById('input-container-gift').classList.toggle('hidden', type !== 'gift');
+      document.getElementById('input-container-chat').classList.toggle('hidden', type !== 'chat');
+    }
+
+    async function saveNewRule() {
+      const type = document.getElementById('modal-trigger-type').value;
+      const targetKey = document.getElementById('modal-target-key').value.trim().toLowerCase();
+      const pressMode = document.getElementById('modal-press-mode').value;
+      const duration = parseFloat(document.getElementById('modal-duration').value) || 0.4;
+      const cooldown = parseFloat(document.getElementById('modal-cooldown').value) || 0.1;
+      const multiplier = document.getElementById('modal-multiplier').checked;
+
+      if (!targetKey) {
+        alert("Pilih tombol target keyboard!");
+        return;
+      }
+
+      const newRule = {
+        id: "rule_" + Date.now(),
+        trigger_type: type,
+        gift_name: type === 'gift' ? document.getElementById('modal-gift-name').value.trim() : null,
+        chat_command: type === 'chat' ? document.getElementById('modal-chat-cmd').value.trim() : null,
+        like_count: type === 'like' ? parseInt(document.getElementById('modal-like-count').value, 10) || 5 : null,
+        target_key: targetKey,
+        press_mode: pressMode,
+        duration_seconds: duration,
+        multiplier_enabled: multiplier,
+        cooldown_seconds: cooldown,
+        enabled: true
+      };
+
+      appRules.push(newRule);
+      renderRules();
+      await saveCurrentConfig();
+      closeRuleModal();
+    }
+  </script>
+</body>
+</html>

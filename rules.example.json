@@ -1,0 +1,86 @@
+{
+  "tiktok_username": "",
+  "require_roblox_focus": false,
+  "auto_focus_roblox": true,
+  "max_queue_size": 50,
+  "rules": [
+    {
+      "id": "rule_rose_forward",
+      "trigger_type": "gift",
+      "gift_name": "Rose",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 0.4,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": true
+    },
+    {
+      "id": "rule_doughnut_jump",
+      "trigger_type": "gift",
+      "gift_name": "Doughnut",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "space",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.3,
+      "enabled": true
+    },
+    {
+      "id": "rule_chat_jump",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!jump",
+      "like_count": null,
+      "target_key": "space",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "rule_chat_left",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!kiri",
+      "like_count": null,
+      "target_key": "a",
+      "press_mode": "hold",
+      "duration_seconds": 0.5,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.2,
+      "enabled": true
+    },
+    {
+      "id": "rule_chat_right",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!kanan",
+      "like_count": null,
+      "target_key": "d",
+      "press_mode": "hold",
+      "duration_seconds": 0.5,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.2,
+      "enabled": true
+    },
+    {
+      "id": "rule_like_forward",
+      "trigger_type": "like",
+      "gift_name": null,
+      "chat_command": null,
+      "like_count": 5,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 0.4,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": true
+    }
+  ]
+}
