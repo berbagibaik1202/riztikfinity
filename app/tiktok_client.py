@@ -23,6 +23,7 @@ from TikTokLive.events import (
 
 from app.config import AppConfig, TriggerType
 from app.queue_manager import QueueManager
+from app.roblox_race import roblox_race_mgr
 
 logger = logging.getLogger("tiktok_client")
 
@@ -210,6 +211,21 @@ class TikTokManager:
                 },
             )
 
+            # Check if user joins Roblox Live Race via chat keyword (e.g. "ikut")
+            if roblox_race_mgr.enabled and "ikut" in text.lower():
+                join_res = roblox_race_mgr.join_racer(
+                    user_id=unique_id,
+                    nickname=user_name,
+                    avatar=avatar_url,
+                )
+                if join_res.get("status") == "ok":
+                    vehicle = join_res["racer"]["vehicle"]
+                    vehicle_name = "Mobil" if vehicle == "car" else "Motor"
+                    await self.queue_manager.broadcast_log(
+                        "INFO",
+                        f"🏎️ {user_name} bergabung ke Balapan Roblox ({vehicle_name}) via chat 'ikut'!",
+                    )
+
             # Match controller rules for game
             for rule in self.config.rules:
                 if not rule.enabled or rule.trigger_type != TriggerType.CHAT:
@@ -251,6 +267,45 @@ class TikTokManager:
                     "combo": combo,
                 },
             )
+
+            # Interactive Roblox Live Race controls via TikTok Gifts
+            if roblox_race_mgr.enabled:
+                g_lower = gift_name.lower()
+                clean_uid = str(unique_id or user_name).strip().lower()
+
+                # 1. Rose / Mawar: Join race arena OR speed boost (1x or 5x or combo)
+                if "rose" in g_lower or "mawar" in g_lower:
+                    if clean_uid not in roblox_race_mgr.racers:
+                        join_res = roblox_race_mgr.join_racer(user_id=unique_id, nickname=user_name, avatar=avatar_url)
+                        vehicle = join_res.get("racer", {}).get("vehicle", "car")
+                        vehicle_name = "Mobil" if vehicle == "car" else "Motor"
+                        await self.queue_manager.broadcast_log(
+                            "INFO",
+                            f"🏎️ {user_name} masuk arena Balapan Roblox ({vehicle_name}) dari Gift Mawar!",
+                        )
+                    else:
+                        mult = combo
+                        roblox_race_mgr.boost_racer(user_id=unique_id, nickname=user_name, multiplier=mult)
+                        await self.queue_manager.broadcast_log(
+                            "INFO",
+                            f"⚡ {user_name} mempercepat laju {mult}x di Balapan Roblox!",
+                        )
+
+                # 2. Donut / Doughnut: Turbo speed!
+                elif "doughnut" in g_lower or "donat" in g_lower or "donut" in g_lower:
+                    roblox_race_mgr.boost_racer(user_id=unique_id, nickname=user_name, multiplier=8, turbo=True)
+                    await self.queue_manager.broadcast_log(
+                        "INFO",
+                        f"🍩 {user_name} mengaktifkan KECEPATAN TURBO DONAT di Balapan Roblox!",
+                    )
+
+                # 3. Cap / Topi / Hat: Shoot Rocket at opponents!
+                elif "cap" in g_lower or "topi" in g_lower or "hat" in g_lower:
+                    roblox_race_mgr.fire_rocket(user_id=unique_id, nickname=user_name)
+                    await self.queue_manager.broadcast_log(
+                        "INFO",
+                        f"🚀 {user_name} menembakkan ROKET TOPI ke lawan di Balapan Roblox!",
+                    )
 
             # Match controller rules for game
             for rule in self.config.rules:

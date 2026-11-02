@@ -1,4 +1,4 @@
-# Product Requirement Document (PRD) v2.0
+# Product Requirement Document (PRD) v2.2
 ## TikTok Live Game Controller & Interactive OBS Streaming Suite (RizTik)
 
 ---
@@ -6,14 +6,10 @@
 ### 1. Executive Summary & Objective
 
 #### 1.1 Ringkasan Produk
-Aplikasi **RizTik (TikTok Live Game Controller & Interactive OBS Streaming Suite)** adalah perangkat lunak desktop lokal (*local bridge & overlay suite*) yang menghubungkan siaran langsung TikTok Live dengan dua modul utama:
+Aplikasi **RizTik (TikTok Live Game Controller & Interactive OBS Streaming Suite)** adalah perangkat lunak desktop lokal (*local bridge & overlay suite*) yang menghubungkan siaran langsung TikTok Live dengan tiga modul utama:
 1. **DirectInput Game Controller:** Mengubah interaksi penonton (Gift, Like, Chat) menjadi penekanan tombol keyboard hardware nyata (*DirectInput Scancode*) untuk mengendalikan game PC seperti Roblox (Obby, Survival, Racing).
-2. **Interactive OBS Streaming Overlay & TTS Suite:** Menyediakan visual interaktif real-time untuk OBS Studio berupa:
-   * **Karakter penonton berjalan** di bagian bawah layar saat ada penonton join (dengan nametag dan balon chat yang tidak terbalik).
-   * **Balon hadiah gift melayang** dengan hitungan combo.
-   * **Partikel love tap-tap** saat penonton memberi like.
-   * **Pembaca komentar otomatis (TTS)** dengan suara robot Bahasa Indonesia.
-   * **Halaman daftar komentar live transparan** (`/comments`) dengan format `Nama User : Komentarnya`.
+2. **Interactive OBS Streaming Overlay & TTS Suite:** Menyediakan visual interaktif real-time untuk OBS Studio berupa karakter penonton berjalan, balon gift melayang, partikel love tap-tap, pembaca suara otomatis (TTS), dan daftar live komentar vertikal (`/comments`).
+3. **Roblox Live Racing Arena (Interactive Game Engine):** Integrasi dua arah dengan Roblox Studio via `HttpService` yang menjalankan arena balapan Mobil dan Motor otomatis. Penonton dapat bergabung menjadi pembalap via chat "ikut" atau Gift Mawar, dan mengendalikan jalannya balapan menggunakan Gift (Mawar = Boost, Donut = Turbo, Topi = Tembak Roket).
 
 #### 1.2 Tujuan Bisnis & Pengalaman Pengguna
 * **Interaktivitas Maksimal:** Memberikan sensasi visual langsung kepada penonton bahwa kehadiran, komentar, dan gift mereka berdampak instan di layar siaran dan di dalam game streamer.
@@ -221,6 +217,7 @@ Berikut adalah status implementasi seluruh kebutuhan PRD per **2 November 2026**
 | **FR-7.3** | Anti-Mirrored LTR Text di OBS Comments | v2.0 | ✅ **SELESAI** | CSS `direction: ltr !important`. |
 | **FR-7.4** | Anti-Cache Headers OBS Chromium CEF | v2.0 | ✅ **SELESAI** | `Cache-Control: no-cache, no-store`. |
 | **FR-8.1** | Multi-Profile Preset Manager (Obby, Driving, Minecraft) | v2.1 | ✅ **SELESAI** | Pengalihan profil instan, 4 built-in preset, ekspor/impor JSON, sinkronisasi otomatis. |
+| **FR-9.1** | Roblox Live Racing Mode (Mobil & Motor) | v2.2 | ✅ **SELESAI** | Integrasi HttpService dua arah, join otomatis via Gift Mawar & Chat "ikut", power-up Turbo Donut, Roket Topi, lap counter & sirkuit stadion otomatis. |
 | **Fase 4** | Standalone Executable (.exe Packaging) | Roadmap | ⏳ **BELUM SELESAI** | Masih berjalan via `run.bat` dan virtual environment `.venv`. |
 | **Audio** | Sound Effects (SFX) Kustom untuk Gift | Roadmap | ⏳ **BELUM SELESAI** | Belum ada pemutar file audio MP3/WAV lokal saat gift tertentu masuk. |
 | **Mod** | Filter Kata Kasar (Bad Words Filter) TTS | Roadmap | ⏳ **BELUM SELESAI** | Belum ada sensor kata kotor sebelum dibacakan robot TTS atau ditampilkan di chat. |

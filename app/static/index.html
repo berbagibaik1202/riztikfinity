@@ -376,6 +376,120 @@
         </p>
       </div>
 
+      <!-- ROBLOX LIVE RACING ARENA (TIKTOK INTERACTIVE) -->
+      <div id="roblox-race-card" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">🏎️</span>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-bold text-slate-100 uppercase tracking-wider">
+                  Roblox Live Racing Arena
+                </h2>
+                <span id="race-mode-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 font-bold border border-emerald-800">
+                  Mode Balap Aktif
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">Balapan Mobil & Motor otomatis dikontrol hadiah Gift (Mawar, Donut, Topi) & chat "ikut" penonton!</p>
+            </div>
+          </div>
+
+          <!-- Status Pills -->
+          <div class="flex items-center gap-2 text-xs">
+            <span id="roblox-conn-pill" class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 font-semibold flex items-center gap-1.5 text-[11px]">
+              <span id="roblox-conn-dot" class="w-2 h-2 rounded-full bg-slate-500"></span>
+              <span id="roblox-conn-text">Menunggu Roblox Studio...</span>
+            </span>
+            <span id="race-state-pill" class="px-2.5 py-1 rounded-lg bg-amber-950/70 border border-amber-800/80 text-amber-300 font-bold text-[11px] flex items-center gap-1">
+              🏁 Standby (Grid Start)
+            </span>
+          </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="flex items-center justify-between flex-wrap gap-2.5 p-3 bg-slate-950/70 border border-slate-800/80 rounded-xl">
+          <div class="flex items-center flex-wrap gap-2">
+            <button onclick="controlRace('start')" class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold py-2 px-4 rounded-xl text-xs shadow-md shadow-emerald-950/50 flex items-center gap-1.5 transition">
+              <span>🚀</span> Mulai Balapan!
+            </button>
+            <button onclick="controlRace('reset')" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-semibold py-2 px-3 rounded-xl text-xs border border-slate-700 transition flex items-center gap-1.5">
+              <span>🔄</span> Reset Garis Start
+            </button>
+            <button onclick="controlRace('clear')" class="bg-rose-950/50 hover:bg-rose-900 active:scale-95 text-rose-300 font-semibold py-2 px-3 rounded-xl text-xs border border-rose-800/60 transition flex items-center gap-1.5">
+              <span>🧹</span> Kosongkan Arena
+            </button>
+          </div>
+
+          <div class="flex items-center gap-2 text-xs">
+            <!-- Vehicle Preference Dropdown -->
+            <select id="race-vehicle-pref" onchange="updateRaceSettings()" class="bg-slate-900 border border-slate-700 text-slate-200 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-rose-500 cursor-pointer">
+              <option value="mixed">🚗 & 🏍️ Campur (Mobil & Motor)</option>
+              <option value="car">🚗 Hanya Mobil</option>
+              <option value="motorcycle">🏍️ Hanya Motor</option>
+            </select>
+
+            <button onclick="openRobloxGuideModal()" class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-bold py-2 px-3.5 rounded-xl text-xs shadow transition flex items-center gap-1.5">
+              <span>📖</span> Script Roblox Studio
+            </button>
+          </div>
+        </div>
+
+        <!-- Active Racers List -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+              <span>🏁</span> Daftar Pembalap di Arena
+              <span id="racers-count-badge" class="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] text-cyan-400 font-bold">0 Pembalap</span>
+            </span>
+            <span class="text-[11px] text-slate-500">Ketik <b>ikut</b> di chat atau kirim <b>Mawar 🌹</b> untuk masuk</span>
+          </div>
+
+          <!-- Racers Cards Grid -->
+          <div id="racers-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 max-h-[190px] overflow-y-auto p-2.5 bg-slate-950/50 rounded-xl border border-slate-800/80">
+            <!-- Dynamically populated -->
+            <div id="racers-empty-state" class="col-span-full py-6 text-center text-xs text-slate-500 italic">
+              🏁 Belum ada pembalap di arena. Buka Roblox Studio dan jalankan game (Play/Run F5).<br>
+              Minta penonton mengirim <b>Gift Mawar 🌹</b> atau ketik <b>"ikut"</b> di live chat!
+            </div>
+          </div>
+        </div>
+
+        <!-- Simulator Uji Coba Cepat (Test Sandbox) -->
+        <div class="pt-3 border-t border-slate-800/80 space-y-2.5">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+              <span>🧪</span> Simulator Event Balap (Uji Coba Langsung)
+            </span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] text-slate-500">Nama Tester:</span>
+              <input type="text" id="test-racer-name" value="Rizky_Speed" class="w-32 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 font-semibold focus:outline-none focus:border-rose-500">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+            <button onclick="testRobloxAction('join_rose')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-rose-300 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>🌹</span> Join Mawar
+            </button>
+            <button onclick="testRobloxAction('join_chat')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-cyan-300 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>💬</span> Join Chat "ikut"
+            </button>
+            <button onclick="testRobloxAction('boost_1x')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-amber-300 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>⚡</span> Boost 1x
+            </button>
+            <button onclick="testRobloxAction('boost_5x')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-amber-400 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>⚡⚡</span> Boost 5x
+            </button>
+            <button onclick="testRobloxAction('turbo_donut')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-orange-400 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>🍩</span> Turbo Donat!
+            </button>
+            <button onclick="testRobloxAction('rocket_topi')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-purple-400 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>🚀</span> Tembak Roket!
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Action Rules Section -->
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm">
         <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -556,6 +670,74 @@
     </div>
   </div>
 
+  <!-- MODAL: ROBLOX STUDIO SETUP GUIDE & 1-CLICK SCRIPTS -->
+  <div id="roblox-guide-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <span class="text-3xl">🏎️</span>
+          <div>
+            <h3 class="font-bold text-base text-white">Panduan Setup Balapan di Roblox Studio</h3>
+            <p class="text-xs text-slate-400">Ikuti 3 langkah mudah berikut untuk menjalankan game balapan di Roblox Anda!</p>
+          </div>
+        </div>
+        <button onclick="closeRobloxGuideModal()" class="text-slate-400 hover:text-white text-lg">✕</button>
+      </div>
+
+      <!-- Step 1 -->
+      <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-sm text-cyan-400 flex items-center gap-2">
+            <span>1️⃣</span> Buat Sirkuit Stadion Otomatis (Command Bar)
+          </span>
+          <button onclick="copyTrackScript()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs py-1.5 px-3 rounded-lg transition shadow">
+            📋 Salin Script Sirkuit
+          </button>
+        </div>
+        <p class="text-xs text-slate-300">
+          Di Roblox Studio (Baseplate kosong), buka tab <b>View</b> ➔ centang <b>Command Bar</b> di bawah layar. Tempel (Paste) script ini lalu tekan <b>Enter</b>. Sirkuit stadion lengkap akan langsung jadi dalam 1 detik!
+        </p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-sm text-rose-400 flex items-center gap-2">
+            <span>2️⃣</span> Pasang Controller Balapan (ServerScriptService)
+          </span>
+          <button onclick="copyControllerScript()" class="bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs py-1.5 px-3 rounded-lg transition shadow">
+            📋 Salin Script Controller
+          </button>
+        </div>
+        <p class="text-xs text-slate-300">
+          Di Explorer Roblox Studio, klik kanan folder <b>ServerScriptService</b> ➔ <b>Insert Object</b> ➔ <b>Script</b>. Beri nama <code class="text-rose-300 bg-slate-900 px-1 py-0.5 rounded font-mono">LiveRaceController</code>, lalu tempel isi script ini ke dalamnya.
+        </p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+        <span class="font-bold text-sm text-amber-400 flex items-center gap-2">
+          <span>3️⃣</span> Aktifkan HTTP Requests di Game Settings
+        </span>
+        <p class="text-xs text-slate-300">
+          Klik tab <b>Home</b> ➔ <b>Game Settings</b> (Simpan ke Roblox jika diminta) ➔ pilih menu <b>Security</b> ➔ aktifkan centang <b>Allow HTTP Requests</b> ➔ klik <b>Save</b>.
+        </p>
+      </div>
+
+      <!-- Step 4 -->
+      <div class="p-3.5 bg-emerald-950/40 border border-emerald-800/60 rounded-xl text-xs text-emerald-300 flex items-center gap-2.5">
+        <span class="text-xl">✅</span>
+        <span><b>Selesai!</b> Tekan tombol <b>Play / Run (F5)</b> di Roblox Studio. Penonton live TikTok Anda langsung bisa masuk arena balapan!</span>
+      </div>
+
+      <div class="pt-2 text-right">
+        <button onclick="closeRobloxGuideModal()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold py-2 px-5 rounded-xl text-xs transition">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
   <script>
     let appRules = [];
@@ -569,8 +751,10 @@
       await fetchProfiles();
       await fetchRules();
       await fetchOverlaySettings();
+      await fetchRobloxRaceSummary();
       initWebSocket();
       setInterval(fetchStatus, 3000);
+      setInterval(fetchRobloxRaceSummary, 2500);
     });
 
     function initWebSocket() {
@@ -585,11 +769,16 @@
             appendLog(msg.data);
           } else if (msg.type === "state" || msg.type === "init") {
             updateConnectionUI(msg.data.state, msg.data.room_id, msg.data.user);
+            if (msg.data.roblox_race) {
+              updateRobloxRaceUI(msg.data.roblox_race);
+            }
           } else if (msg.type === "profile_changed") {
             activeProfileId = msg.data.active_profile;
             appRules = msg.data.rules || [];
             renderRules();
             fetchProfiles();
+          } else if (msg.type === "roblox_race") {
+            fetchRobloxRaceSummary();
           }
         } catch (e) {
           console.error("WS error:", e);
@@ -1112,6 +1301,207 @@
       renderRules();
       await saveCurrentConfig();
       closeRuleModal();
+    }
+
+    // ==========================================
+    // ROBLOX LIVE RACE CONTROLLER FUNCTIONS
+    // ==========================================
+    function escapeHtml(text) {
+      if (!text) return "";
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    async function fetchRobloxRaceSummary() {
+      try {
+        const res = await fetch('/api/roblox/summary');
+        const data = await res.json();
+        updateRobloxRaceUI(data);
+      } catch (e) {
+        console.error("Gagal memuat status balapan Roblox:", e);
+      }
+    }
+
+    function updateRobloxRaceUI(data) {
+      if (!data) return;
+
+      // Roblox Studio connection status indicator
+      const connPill = document.getElementById('roblox-conn-pill');
+      const connDot = document.getElementById('roblox-conn-dot');
+      const connText = document.getElementById('roblox-conn-text');
+      if (connPill && connDot && connText) {
+        if (data.roblox_connected) {
+          connDot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+          connText.innerText = "Roblox Studio Terhubung (Ready)";
+          connText.className = "text-emerald-300 font-bold";
+          connPill.className = "px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-800 text-emerald-300 font-semibold flex items-center gap-1.5 text-[11px]";
+        } else {
+          connDot.className = "w-2 h-2 rounded-full bg-slate-500";
+          connText.innerText = "Menunggu Roblox Studio...";
+          connText.className = "text-slate-400 font-medium";
+          connPill.className = "px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 font-semibold flex items-center gap-1.5 text-[11px]";
+        }
+      }
+
+      // Race State status pill
+      const statePill = document.getElementById('race-state-pill');
+      if (statePill) {
+        if (data.race_state === "racing") {
+          statePill.className = "px-2.5 py-1 rounded-lg bg-emerald-950/80 border border-emerald-700 text-emerald-300 font-bold text-[11px] flex items-center gap-1 animate-pulse";
+          statePill.innerHTML = "🚀 Balapan Sedang Berlangsung!";
+        } else if (data.race_state === "finished") {
+          statePill.className = "px-2.5 py-1 rounded-lg bg-amber-950/80 border border-amber-600 text-amber-300 font-bold text-[11px] flex items-center gap-1";
+          const wName = data.winner ? data.winner.nickname : "Selesai";
+          statePill.innerHTML = `🏆 Juara: <b>${escapeHtml(wName)}</b>`;
+        } else {
+          statePill.className = "px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 font-bold text-[11px] flex items-center gap-1";
+          statePill.innerHTML = "🏁 Standby (Grid Start)";
+        }
+      }
+
+      // Vehicle preference select
+      const vehPref = document.getElementById('race-vehicle-pref');
+      if (vehPref && data.vehicle_preference) {
+        vehPref.value = data.vehicle_preference;
+      }
+
+      // Racers count badge
+      const countBadge = document.getElementById('racers-count-badge');
+      if (countBadge) {
+        countBadge.innerText = `${data.racer_count || 0} Pembalap`;
+      }
+
+      // Render Racers Grid
+      const grid = document.getElementById('racers-grid');
+      if (!grid) return;
+
+      const racersList = data.racers || [];
+      if (racersList.length === 0) {
+        grid.innerHTML = `
+          <div id="racers-empty-state" class="col-span-full py-6 text-center text-xs text-slate-500 italic">
+            🏁 Belum ada pembalap di arena. Buka Roblox Studio dan jalankan game (Play/Run F5).<br>
+            Minta penonton mengirim <b>Gift Mawar 🌹</b> atau ketik <b>"ikut"</b> di live chat!
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = '';
+      racersList.forEach((r) => {
+        const isCar = r.vehicle === "car";
+        const vIcon = isCar ? "🏎️" : "🏍️";
+        const vName = isCar ? "Mobil" : "Motor";
+        const borderClass = isCar ? "border-rose-800/80" : "border-cyan-800/80";
+        const badgeBg = isCar ? "bg-rose-950/80 text-rose-300" : "bg-cyan-950/80 text-cyan-300";
+
+        let boostLabel = "";
+        if (r.turbo_active) {
+          boostLabel = `<span class="px-1.5 py-0.5 rounded bg-orange-950 text-orange-400 font-bold text-[10px] animate-pulse">🔥 TURBO</span>`;
+        } else if (r.speed_multiplier > 1.0) {
+          boostLabel = `<span class="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 font-bold text-[10px]">⚡ ${r.speed_multiplier.toFixed(1)}x</span>`;
+        }
+
+        const card = document.createElement('div');
+        card.className = `p-2.5 bg-slate-900 border ${borderClass} rounded-xl text-xs space-y-1.5 flex flex-col justify-between shadow-sm`;
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-extrabold text-slate-100 truncate text-[12px] flex items-center gap-1">
+              <span>${vIcon}</span>
+              <span class="truncate">${escapeHtml(r.nickname)}</span>
+            </span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded-full font-bold ${badgeBg}">
+              ${vName}
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
+            <span>🏁 Lap ${r.lap || 1}/${data.total_laps || 3}</span>
+            <div>${boostLabel}</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function controlRace(action) {
+      try {
+        const res = await fetch('/api/roblox/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        await fetchRobloxRaceSummary();
+      } catch (e) {
+        console.error("Gagal mengirim kontrol balapan:", e);
+      }
+    }
+
+    async function updateRaceSettings() {
+      const pref = document.getElementById('race-vehicle-pref').value;
+      try {
+        await fetch('/api/roblox/control', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'set_vehicle',
+            vehicle_preference: pref
+          })
+        });
+        await fetchRobloxRaceSummary();
+      } catch (e) {
+        console.error("Gagal menyimpan preferensi kendaraan:", e);
+      }
+    }
+
+    async function testRobloxAction(testType) {
+      const nameInput = document.getElementById('test-racer-name');
+      const testerName = (nameInput ? nameInput.value.trim() : "") || "Tester_Speed";
+
+      try {
+        await fetch('/api/roblox/test-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            test_type: testType,
+            nickname: testerName
+          })
+        });
+        await fetchRobloxRaceSummary();
+      } catch (e) {
+        console.error("Gagal uji coba aksi balapan:", e);
+      }
+    }
+
+    function openRobloxGuideModal() {
+      document.getElementById('roblox-guide-modal').classList.remove('hidden');
+    }
+
+    function closeRobloxGuideModal() {
+      document.getElementById('roblox-guide-modal').classList.add('hidden');
+    }
+
+    async function copyTrackScript() {
+      try {
+        const res = await fetch('/api/roblox/script/track');
+        if (!res.ok) throw new Error("Gagal mengunduh script sirkuit");
+        const code = await res.text();
+        await navigator.clipboard.writeText(code);
+        alert("✅ Script Sirkuit Otomatis berhasil disalin ke Clipboard!\n\nTempel (Paste) di Command Bar Roblox Studio dan tekan Enter.");
+      } catch (e) {
+        alert("Gagal menyalin script: " + e);
+      }
+    }
+
+    async function copyControllerScript() {
+      try {
+        const res = await fetch('/api/roblox/script/controller');
+        if (!res.ok) throw new Error("Gagal mengunduh script controller");
+        const code = await res.text();
+        await navigator.clipboard.writeText(code);
+        alert("✅ Script LiveRaceController berhasil disalin ke Clipboard!\n\nBuat Script baru di ServerScriptService Roblox Studio, lalu paste seluruh isinya.");
+      } catch (e) {
+        alert("Gagal menyalin script: " + e);
+      }
     }
   </script>
 </body>

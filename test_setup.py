@@ -86,10 +86,61 @@ def test_profiles():
     assert can_del is True, "Failed to delete non-active profile"
     print("  [OK] Duplication and safety delete guards verified successfully.")
 
+def test_roblox_race():
+    print("\nTesting Roblox Live Race system...")
+    from app.roblox_race import roblox_race_mgr
+    
+    # Reset
+    roblox_race_mgr.reset_race(clear_racers=True)
+    assert len(roblox_race_mgr.racers) == 0
+
+    # Join racer via Rose / Chat
+    res1 = roblox_race_mgr.join_racer("user_101", "SpeedDemon", vehicle="car")
+    assert res1["status"] == "ok"
+    assert "user_101" in roblox_race_mgr.racers
+    assert roblox_race_mgr.racers["user_101"]["vehicle"] == "car"
+
+    res2 = roblox_race_mgr.join_racer("user_102", "BikerPro", vehicle="motorcycle")
+    assert res2["status"] == "ok"
+    assert roblox_race_mgr.racers["user_102"]["vehicle"] == "motorcycle"
+
+    # Boost 1x, 5x, Turbo
+    b1 = roblox_race_mgr.boost_racer("user_101", "SpeedDemon", multiplier=1)
+    assert b1["status"] == "ok"
+
+    t1 = roblox_race_mgr.boost_racer("user_101", "SpeedDemon", multiplier=8, turbo=True)
+    assert t1["status"] == "ok"
+    assert roblox_race_mgr.racers["user_101"]["turbo_active"] is True
+
+    # Rocket
+    rk = roblox_race_mgr.fire_rocket("user_102", "BikerPro")
+    assert rk["status"] == "ok"
+
+    # Start race
+    sr = roblox_race_mgr.start_race()
+    assert sr["race_state"] == "racing"
+
+    # Poll actions
+    actions = roblox_race_mgr.poll_actions(since_id=0)
+    assert len(actions) >= 4
+    act_types = [a["action"] for a in actions]
+    assert "spawn_racer" in act_types
+    assert "boost" in act_types
+    assert "fire_rocket" in act_types
+    assert "start_race" in act_types
+    print(f"  [OK] Successfully enqueued and polled {len(actions)} Roblox race actions.")
+
+    # Check files exist
+    assert os.path.exists("roblox/LiveRaceController.server.lua")
+    assert os.path.exists("roblox/GenerateTrack.lua")
+    assert os.path.exists("roblox/README.md")
+    print("  [OK] Roblox Luau scripts and documentation confirmed present.")
+
 if __name__ == "__main__":
     test_direct_input()
     test_config()
     test_static_and_routes()
     test_profiles()
+    test_roblox_race()
     print("\nAll core tests passed successfully!")
 

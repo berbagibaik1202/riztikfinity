@@ -15,6 +15,7 @@ from app import direct_input
 from app.config import ActionRule, AppConfig, load_config, save_config
 from app.profile_manager import GameProfile, profile_mgr
 from app.queue_manager import QueueManager
+from app.roblox_race import roblox_race_mgr
 from app.tiktok_client import ConnectionState, TikTokManager
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -43,10 +44,19 @@ async def broadcast_ws(message: dict):
                 active_websockets.remove(ws)
 
 
+def safe_schedule(coro):
+    """Safely schedule a coroutine or close it if no event loop is running."""
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(coro)
+    except RuntimeError:
+        coro.close()
+
+
 # Hook up queue logs, connection status, and overlay events to WebSocket broadcast
-queue_mgr.add_log_listener(lambda log: asyncio.create_task(broadcast_ws({"type": "log", "data": log})))
+queue_mgr.add_log_listener(lambda log: safe_schedule(broadcast_ws({"type": "log", "data": log})))
 tiktok_mgr.add_state_listener(
-    lambda state, room_id: asyncio.create_task(
+    lambda state, room_id: safe_schedule(
         broadcast_ws({
             "type": "state",
             "data": {
@@ -58,10 +68,19 @@ tiktok_mgr.add_state_listener(
     )
 )
 tiktok_mgr.add_overlay_listener(
-    lambda payload: asyncio.create_task(
+    lambda payload: safe_schedule(
         broadcast_ws({
             "type": "overlay",
             "data": payload,
+        })
+    )
+)
+roblox_race_mgr.add_listener(
+    lambda event_type, data: safe_schedule(
+        broadcast_ws({
+            "type": "roblox_race",
+            "event": event_type,
+            "data": data,
         })
     )
 )
@@ -478,6 +497,123 @@ async def emergency_stop():
     return {"success": True}
 
 
+# ==========================================
+# ROBLOX LIVE RACE API ENDPOINTS
+# ==========================================
+class RobloxControlRequest(BaseModel):
+    action: str  # "start", "reset", "clear", "toggle", "set_vehicle"
+    vehicle_preference: Optional[str] = None
+    total_laps: Optional[int] = None
+
+
+class RobloxTestActionRequest(BaseModel):
+    test_type: str  # "join_rose", "join_chat", "boost_1x", "boost_5x", "turbo_donut", "rocket_topi"
+    user_id: Optional[str] = None
+    nickname: Optional[str] = None
+
+
+@app.get("/api/roblox/actions")
+async def get_roblox_actions(since_id: int = 0):
+    """Polled by Roblox Studio HttpService to get queued commands."""
+    actions = roblox_race_mgr.poll_actions(since_id=since_id)
+    return JSONResponse(content={"status": "ok", "actions": actions})
+
+
+@app.post("/api/roblox/state")
+async def post_roblox_state(data: dict):
+    """Roblox Studio reports race status, standings, and winner."""
+    res = roblox_race_mgr.update_state_from_roblox(data)
+    return JSONResponse(content=res)
+
+
+@app.get("/api/roblox/summary")
+async def get_roblox_summary():
+    """Returns race status, racers list, and connection status for Dashboard."""
+    return JSONResponse(content=roblox_race_mgr.get_summary())
+
+
+@app.post("/api/roblox/control")
+async def post_roblox_control(req: RobloxControlRequest):
+    """Controls the race state (start, reset, vehicle settings)."""
+    if req.action == "start":
+        return JSONResponse(content=roblox_race_mgr.start_race())
+    elif req.action == "reset":
+        return JSONResponse(content=roblox_race_mgr.reset_race(clear_racers=False))
+    elif req.action == "clear":
+        return JSONResponse(content=roblox_race_mgr.reset_race(clear_racers=True))
+    elif req.action == "toggle":
+        roblox_race_mgr.enabled = not roblox_race_mgr.enabled
+        return JSONResponse(content={"status": "ok", "enabled": roblox_race_mgr.enabled})
+    elif req.action == "set_vehicle":
+        if req.vehicle_preference in ["car", "motorcycle", "mixed"]:
+            roblox_race_mgr.vehicle_preference = req.vehicle_preference
+        if req.total_laps and req.total_laps > 0:
+            roblox_race_mgr.total_laps = req.total_laps
+        return JSONResponse(content=roblox_race_mgr.get_summary())
+    return JSONResponse(status_code=400, content={"status": "error", "message": "Unknown action"})
+
+
+@app.post("/api/roblox/test-action")
+async def post_roblox_test_action(req: RobloxTestActionRequest):
+    """Simulates a test TikTok event for the Roblox Race."""
+    uname = req.nickname or "Tester_Pembalap"
+    uid = req.user_id or uname.lower()
+
+    if req.test_type == "join_rose":
+        res = roblox_race_mgr.join_racer(user_id=uid, nickname=uname)
+        v = res.get("racer", {}).get("vehicle", "car")
+        v_name = "Mobil" if v == "car" else "Motor"
+        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} masuk balapan Roblox ({v_name}) dari Gift Mawar!")
+        return JSONResponse(content=res)
+
+    elif req.test_type == "join_chat":
+        res = roblox_race_mgr.join_racer(user_id=uid, nickname=uname)
+        v = res.get("racer", {}).get("vehicle", "car")
+        v_name = "Mobil" if v == "car" else "Motor"
+        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} masuk balapan Roblox ({v_name}) via chat 'ikut'!")
+        return JSONResponse(content=res)
+
+    elif req.test_type == "boost_1x":
+        res = roblox_race_mgr.boost_racer(user_id=uid, nickname=uname, multiplier=1)
+        await queue_mgr.broadcast_log("INFO", f"⚡ [TEST] {uname} percepat 1x via Mawar 1!")
+        return JSONResponse(content=res)
+
+    elif req.test_type == "boost_5x":
+        res = roblox_race_mgr.boost_racer(user_id=uid, nickname=uname, multiplier=5)
+        await queue_mgr.broadcast_log("INFO", f"⚡ [TEST] {uname} percepat 5x via Mawar 5!")
+        return JSONResponse(content=res)
+
+    elif req.test_type == "turbo_donut":
+        res = roblox_race_mgr.boost_racer(user_id=uid, nickname=uname, multiplier=8, turbo=True)
+        await queue_mgr.broadcast_log("INFO", f"🍩 [TEST] {uname} TURBO DONUT diaktifkan!")
+        return JSONResponse(content=res)
+
+    elif req.test_type == "rocket_topi":
+        res = roblox_race_mgr.fire_rocket(user_id=uid, nickname=uname)
+        await queue_mgr.broadcast_log("INFO", f"🚀 [TEST] {uname} menembakkan ROKET TOPI!")
+        return JSONResponse(content=res)
+
+    return JSONResponse(status_code=400, content={"status": "error", "message": "Unknown test type"})
+
+
+@app.get("/api/roblox/script/{script_name}")
+async def get_roblox_script(script_name: str):
+    """Retrieve Luau script files for 1-click copy into Roblox Studio."""
+    base_dir = os.path.dirname(os.path.dirname(__file__))
+    roblox_dir = os.path.join(base_dir, "roblox")
+    if script_name == "track":
+        fpath = os.path.join(roblox_dir, "GenerateTrack.lua")
+    elif script_name == "controller":
+        fpath = os.path.join(roblox_dir, "LiveRaceController.server.lua")
+    else:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    if os.path.exists(fpath):
+        with open(fpath, "r", encoding="utf-8") as f:
+            return Response(content=f.read(), media_type="text/plain; charset=utf-8")
+    raise HTTPException(status_code=404, detail="File missing")
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -501,6 +637,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "overlay_gift_balloons": config.overlay_gift_balloons,
                 "overlay_like_hearts": config.overlay_like_hearts,
             },
+            "roblox_race": roblox_race_mgr.get_summary(),
         },
     })
     try:
