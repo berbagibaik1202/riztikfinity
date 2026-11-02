@@ -547,3 +547,4 @@ class ProfileManager:
 
 # Singleton instance
 profile_mgr = ProfileManager()
+

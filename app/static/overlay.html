@@ -50,22 +50,21 @@
       color: #fecdd3;
     }
 
-    /* Container for walking characters at the bottom */
+    /* Container for characters wandering at the bottom and floating across the screen */
     #characters-stage {
       position: fixed;
-      bottom: 0;
+      top: 0;
       left: 0;
       width: 100vw;
-      height: 190px;
+      height: 100vh;
       pointer-events: none;
-      overflow: visible;
+      overflow: hidden;
       z-index: 25;
     }
 
-    /* Avatar Character Item - Fixed size, never squashed */
+    /* Avatar Character Item - Fixed size, dynamic X and Y coordinates */
     .avatar-char {
       position: absolute;
-      bottom: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -382,10 +381,13 @@
       window.addEventListener('resize', () => {
         const minX = 15;
         const maxX = Math.max(minX + 30, window.innerWidth - 95);
+        const maxY = Math.max(50, window.innerHeight - 170);
         activeAvatars.forEach(av => {
           if (av.x > maxX) av.x = maxX;
           if (av.x < minX) av.x = minX;
+          if (av.y > maxY) av.y = maxY;
           av.el.style.left = `${av.x}px`;
+          av.el.style.bottom = `${av.y}px`;
         });
       });
 
@@ -593,8 +595,15 @@
       });
     }
 
+    function escapeHtml(text) {
+      if (!text) return "";
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
     // ==========================================
-    // WALKING AVATARS STAGE
+    // WALKING & FLOATING AVATARS STAGE
     // ==========================================
     class AvatarObject {
       constructor(uniqueId, nickname, avatarUrl) {
@@ -605,20 +614,33 @@
         const minX = 15;
         const maxX = Math.max(minX + 30, window.innerWidth - 95);
         this.x = Math.random() * (maxX - minX) + minX;
-        this.speed = (Math.random() * 0.8 + 0.5) * (Math.random() < 0.5 ? 1 : -1);
+
+        // Start near the bottom ground (10px to 30px)
+        this.y = Math.random() * 20 + 10;
+
+        // Horizontal velocity (-1.4 to +1.4)
+        this.vx = (Math.random() * 0.8 + 0.6) * (Math.random() < 0.5 ? 1 : -1);
+        this.vy = 0;
+
+        // Vertical wandering altitude target and timer
+        this.targetY = 10;
+        this.altitudeTimer = Math.floor(Math.random() * 180 + 90);
+        this.floatPhase = Math.random() * Math.PI * 2;
+
         this.speechTimeout = null;
         this.lastActive = Date.now();
 
         this.el = document.createElement('div');
         this.el.className = 'avatar-char';
         this.el.style.left = `${this.x}px`;
+        this.el.style.bottom = `${this.y}px`;
 
         const svgFunc = AVATAR_SVGS[Math.abs(uniqueId.length) % AVATAR_SVGS.length];
 
         this.el.innerHTML = `
           <div class="avatar-nametag">
             <span>🏷️</span>
-            <span>${nickname}</span>
+            <span>${escapeHtml(nickname)}</span>
           </div>
           <div class="avatar-body">
             <div class="avatar-sprite">
@@ -628,47 +650,126 @@
         `;
 
         this.spriteEl = this.el.querySelector('.avatar-sprite');
+        this.bodyEl = this.el.querySelector('.avatar-body');
         document.getElementById('characters-stage').appendChild(this.el);
+      }
+
+      pickNewTargetAltitude() {
+        const maxY = Math.max(120, window.innerHeight - 170);
+        const roll = Math.random();
+
+        if (roll < 0.35) {
+          // Walk along bottom ground
+          this.targetY = Math.random() * 25 + 10;
+        } else if (roll < 0.70) {
+          // Float up to mid-screen
+          this.targetY = Math.random() * (Math.min(320, maxY) - 80) + 80;
+        } else {
+          // Fly high up towards upper screen
+          this.targetY = Math.random() * (maxY - 200) + 200;
+        }
+
+        // Randomize speed slightly on altitude shift
+        const speedMagnitude = Math.random() * 0.8 + 0.6;
+        this.vx = (this.vx >= 0 ? 1 : -1) * speedMagnitude;
+
+        // Frames until next altitude decision (approx 3 to 8 seconds at 60fps)
+        this.altitudeTimer = Math.floor(Math.random() * 300 + 180);
       }
 
       updatePosition() {
         const minX = 15;
         const maxX = Math.max(minX + 30, window.innerWidth - 95);
+        const minY = 10;
+        const maxY = Math.max(minY + 40, window.innerHeight - 170);
 
-        // Instantly bring character back into view if window/OBS was resized smaller
+        // Clamping on viewport resize
         if (this.x > maxX) {
           this.x = maxX;
-          this.speed = -Math.abs(this.speed);
+          this.vx = -Math.abs(this.vx);
         } else if (this.x < minX) {
           this.x = minX;
-          this.speed = Math.abs(this.speed);
+          this.vx = Math.abs(this.vx);
         }
 
-        this.x += this.speed;
+        if (this.y > maxY) {
+          this.y = maxY;
+          this.targetY = minY;
+        } else if (this.y < minY) {
+          this.y = minY;
+        }
 
+        // Pick new altitude when timer expires
+        this.altitudeTimer--;
+        if (this.altitudeTimer <= 0) {
+          this.pickNewTargetAltitude();
+        }
+
+        // Smooth vertical acceleration towards target altitude
+        const dy = this.targetY - this.y;
+        this.vy = dy * 0.015;
+        if (this.vy > 1.8) this.vy = 1.8;
+        if (this.vy < -1.8) this.vy = -1.8;
+
+        // Gentle floating wave when in air
+        this.floatPhase += 0.04;
+        let bob = 0;
+        if (this.y > 40) {
+          bob = Math.sin(this.floatPhase) * 0.6;
+        }
+
+        this.x += this.vx;
+        this.y += this.vy + bob;
+
+        // Boundary bounce horizontal
         if (this.x <= minX) {
           this.x = minX;
-          this.speed = Math.abs(this.speed);
+          this.vx = Math.abs(this.vx);
         } else if (this.x >= maxX) {
           this.x = maxX;
-          this.speed = -Math.abs(this.speed);
+          this.vx = -Math.abs(this.vx);
         }
+
+        // Boundary limits vertical
+        if (this.y <= minY) {
+          this.y = minY;
+          this.vy = 0;
+        } else if (this.y >= maxY) {
+          this.y = maxY;
+          this.vy = 0;
+        }
+
         this.el.style.left = `${this.x}px`;
+        this.el.style.bottom = `${this.y}px`;
         this.el.style.transform = "none";
 
-        // Flip ONLY the character sprite so the face looks in walking direction,
-        // while the nametag and comment speech bubble ALWAYS remain normal and un-mirrored!
+        // Flip ONLY sprite horizontally according to velocity,
+        // nametag and speech bubble always remain normal LTR!
         if (this.spriteEl) {
-          this.spriteEl.style.transform = this.speed >= 0 ? "scaleX(1)" : "scaleX(-1)";
+          this.spriteEl.style.transform = this.vx >= 0 ? "scaleX(1)" : "scaleX(-1)";
+        }
+
+        // Subtle tilt when in air
+        if (this.bodyEl) {
+          if (this.y > 50) {
+            const tilt = (this.vx >= 0 ? 1 : -1) * 3;
+            this.bodyEl.style.transform = `rotate(${tilt}deg)`;
+          } else {
+            this.bodyEl.style.transform = "";
+          }
         }
       }
 
       jump() {
-        const body = this.el.querySelector('.avatar-body');
-        if (body) {
-          body.style.animation = "avatarJump 0.4s ease-out";
+        // Boost upward into the air when user likes or events trigger jump
+        this.targetY = Math.min(this.targetY + 120, window.innerHeight - 170);
+        this.y = Math.min(this.y + 35, window.innerHeight - 170);
+        this.altitudeTimer = 160; // remain floating for a bit
+
+        if (this.bodyEl) {
+          this.bodyEl.style.animation = "avatarJump 0.4s ease-out";
           setTimeout(() => {
-            body.style.animation = "walkBounce 0.45s infinite alternate ease-in-out";
+            this.bodyEl.style.animation = "walkBounce 0.45s infinite alternate ease-in-out";
           }, 450);
         }
       }

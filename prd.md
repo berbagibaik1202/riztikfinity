@@ -124,11 +124,12 @@ Aplikasi **RizTik (TikTok Live Game Controller & Interactive OBS Streaming Suite
 * **FR-4.5:** Tombol salin URL OBS sekali klik (*One-Click Copy URL*).
 
 #### 5.5 Modul OBS Interactive Overlay Karakter & Balon (`/overlay`) (FR-5)
-* **FR-5.1: Karakter Berjalan Penonton (Join Event):**
-  * Setiap penonton yang bergabung memunculkan avatar SVG unik yang berjalan bolak-balik di dasar layar.
+* **FR-5.1: Karakter Berjalan & Melayang Penonton (Join Event):**
+  * Setiap penonton yang bergabung memunculkan avatar SVG unik yang bergerak di layar siaran.
+  * **Gerakan 2D Dinamis (Dasar & Atas Layar Acak):** Karakter tidak hanya berjalan bolak-balik di dasar layar, tetapi juga dapat melayang/terbang ke atas layar secara acak (*floating/flying motion*) dengan easing akselerasi halus dan gelombang bobbing di udara, lalu meluncur kembali ke bawah secara dinamis.
   * **Ukuran Tetap (*Fixed Size*):** Karakter mempertahankan skala ukuran tetap (68px) dan tidak mengecil/hilang saat jendela OBS di-resize.
-  * **Anti-Mirrored Text:** Saat karakter mencapai tepi layar dan berbalik arah (kiri $\leftrightarrow$ kanan), **hanya badan sprite karakter yang dibalik**, sedangkan teks nama (*nametag*) dan balon obrolan (*speech bubble*) **tetap normal (LTR) dan tidak terbalik**.
-  * Viewport clamping dinamis menjaga karakter tidak keluar dari batas layar.
+  * **Anti-Mirrored Text:** Saat karakter berputar arah (kiri $\leftrightarrow$ kanan), **hanya badan sprite karakter yang dibalik**, sedangkan teks nama (*nametag*) dan balon obrolan (*speech bubble*) **tetap normal (LTR) dan tidak terbalik**.
+  * Viewport clamping dinamis menjaga karakter dan balon obrolan tidak keluar dari batas layar OBS.
 * **FR-5.2: Balon Hadiah Gift (Gift Event):**
   * Memunculkan balon udara melayang warna-warni bertuliskan nama gift dan multiplier combo (contoh: `Rose x5`).
 * **FR-5.3: Partikel Hati Tap-Tap (Like Event):**

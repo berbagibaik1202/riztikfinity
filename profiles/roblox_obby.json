@@ -6,7 +6,7 @@
   "is_builtin": true,
   "rules": [
     {
-      "id": "obby_rose_forward",
+      "id": "rule_rose_forward",
       "trigger_type": "gift",
       "gift_name": "Rose",
       "chat_command": null,
@@ -19,7 +19,7 @@
       "enabled": true
     },
     {
-      "id": "obby_doughnut_jump",
+      "id": "rule_doughnut_jump",
       "trigger_type": "gift",
       "gift_name": "Doughnut",
       "chat_command": null,
@@ -29,85 +29,72 @@
       "duration_seconds": 0.1,
       "multiplier_enabled": false,
       "cooldown_seconds": 0.3,
-      "enabled": true
+      "enabled": false
     },
     {
-      "id": "obby_icecream_left",
-      "trigger_type": "gift",
-      "gift_name": "Ice Cream",
-      "chat_command": null,
-      "like_count": null,
-      "target_key": "a",
-      "press_mode": "hold",
-      "duration_seconds": 0.4,
-      "multiplier_enabled": true,
-      "cooldown_seconds": 0.2,
-      "enabled": true
-    },
-    {
-      "id": "obby_heart_right",
-      "trigger_type": "gift",
-      "gift_name": "Finger Heart",
-      "chat_command": null,
-      "like_count": null,
-      "target_key": "d",
-      "press_mode": "hold",
-      "duration_seconds": 0.4,
-      "multiplier_enabled": true,
-      "cooldown_seconds": 0.2,
-      "enabled": true
-    },
-    {
-      "id": "obby_whale_backward",
-      "trigger_type": "gift",
-      "gift_name": "Whale",
-      "chat_command": null,
-      "like_count": null,
-      "target_key": "s",
-      "press_mode": "hold",
-      "duration_seconds": 1.2,
-      "multiplier_enabled": false,
-      "cooldown_seconds": 1.0,
-      "enabled": true
-    },
-    {
-      "id": "obby_chat_jump",
+      "id": "rule_chat_jump",
       "trigger_type": "chat",
       "gift_name": null,
-      "chat_command": "!lompat",
+      "chat_command": "!jump",
       "like_count": null,
       "target_key": "space",
       "press_mode": "tap",
       "duration_seconds": 0.1,
       "multiplier_enabled": false,
-      "cooldown_seconds": 0.4,
-      "enabled": true
+      "cooldown_seconds": 0.5,
+      "enabled": false
     },
     {
-      "id": "obby_chat_forward",
+      "id": "rule_chat_left",
       "trigger_type": "chat",
       "gift_name": null,
-      "chat_command": "!maju",
+      "chat_command": "!kiri",
       "like_count": null,
-      "target_key": "w",
+      "target_key": "a",
       "press_mode": "hold",
       "duration_seconds": 0.5,
       "multiplier_enabled": false,
-      "cooldown_seconds": 0.3,
-      "enabled": true
+      "cooldown_seconds": 0.2,
+      "enabled": false
     },
     {
-      "id": "obby_like_forward",
+      "id": "rule_chat_right",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!kanan",
+      "like_count": null,
+      "target_key": "d",
+      "press_mode": "hold",
+      "duration_seconds": 0.5,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.2,
+      "enabled": false
+    },
+    {
+      "id": "rule_1793607113421",
       "trigger_type": "like",
       "gift_name": null,
       "chat_command": null,
-      "like_count": 10,
+      "like_count": 5,
       "target_key": "w",
       "press_mode": "hold",
-      "duration_seconds": 0.3,
+      "duration_seconds": 0.4,
       "multiplier_enabled": true,
       "cooldown_seconds": 0.1,
-      "enabled": true
+      "enabled": false
+    },
+    {
+      "id": "rule_1793616672798",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "maju",
+      "like_count": null,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 2.0,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": false
     }
   ]
 }
