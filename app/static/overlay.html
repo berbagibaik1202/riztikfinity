@@ -21,20 +21,49 @@
       position: relative;
     }
 
+    /* Status badge for OBS debugging */
+    #obs-status-badge {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      z-index: 100;
+      transition: opacity 0.8s ease-out;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    .badge-connected {
+      background: rgba(6, 78, 59, 0.9);
+      border: 1px solid #10b981;
+      color: #a7f3d0;
+    }
+
+    .badge-disconnected {
+      background: rgba(136, 19, 55, 0.9);
+      border: 1px solid #f43f5e;
+      color: #fecdd3;
+    }
+
     /* Container for walking characters at the bottom */
     #characters-stage {
       position: absolute;
       bottom: 0;
       left: 0;
       width: 100%;
-      height: 160px;
+      height: 170px;
       pointer-events: none;
     }
 
     /* Avatar Character Item */
     .avatar-char {
       position: absolute;
-      bottom: 10px;
+      bottom: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -45,11 +74,11 @@
     /* Nametag above avatar */
     .avatar-nametag {
       background: rgba(15, 23, 42, 0.88);
-      border: 1px solid rgba(244, 63, 94, 0.5);
+      border: 1px solid rgba(244, 63, 94, 0.6);
       color: #fff;
       font-size: 11px;
       font-weight: 700;
-      padding: 2px 8px;
+      padding: 2px 9px;
       border-radius: 999px;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
       white-space: nowrap;
@@ -66,11 +95,11 @@
       background: #ffffff;
       color: #0f172a;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       padding: 8px 14px;
       border-radius: 16px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-      max-width: 240px;
+      max-width: 260px;
       word-break: break-word;
       animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
       z-index: 30;
@@ -92,8 +121,8 @@
 
     /* Avatar Body Container */
     .avatar-body {
-      width: 58px;
-      height: 58px;
+      width: 60px;
+      height: 60px;
       position: relative;
       animation: walkBounce 0.45s infinite alternate ease-in-out;
     }
@@ -105,7 +134,7 @@
 
     @keyframes avatarJump {
       0% { transform: translateY(0); }
-      50% { transform: translateY(-35px) scale(1.15); }
+      50% { transform: translateY(-40px) scale(1.2); }
       100% { transform: translateY(0); }
     }
 
@@ -121,10 +150,10 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      background: linear-gradient(135deg, rgba(255, 0, 80, 0.92), rgba(244, 63, 94, 0.96));
-      border: 2px solid rgba(255, 255, 255, 0.85);
+      background: linear-gradient(135deg, rgba(255, 0, 80, 0.95), rgba(244, 63, 94, 0.98));
+      border: 2px solid rgba(255, 255, 255, 0.9);
       border-radius: 50px;
-      padding: 8px 18px 8px 10px;
+      padding: 8px 20px 8px 12px;
       color: #ffffff;
       box-shadow: 0 10px 30px rgba(255, 0, 80, 0.5), inset 0 2px 6px rgba(255, 255, 255, 0.4);
       z-index: 40;
@@ -132,7 +161,7 @@
     }
 
     .gift-balloon-icon {
-      font-size: 28px;
+      font-size: 32px;
       filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
     }
 
@@ -150,7 +179,7 @@
 
     .gift-balloon-name {
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       color: #fef08a;
     }
 
@@ -177,7 +206,7 @@
     .floating-heart {
       position: absolute;
       bottom: 30px;
-      font-size: 26px;
+      font-size: 28px;
       z-index: 35;
       animation: floatHeart 2.5s ease-out forwards;
       pointer-events: none;
@@ -204,8 +233,8 @@
       top: 20px;
       left: 50%;
       transform: translateX(-50%) translateY(-100px);
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid rgba(56, 189, 248, 0.6);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(56, 189, 248, 0.7);
       color: #ffffff;
       padding: 10px 24px;
       border-radius: 999px;
@@ -225,6 +254,12 @@
   </style>
 </head>
 <body>
+
+  <!-- Status Badge for OBS Connection -->
+  <div id="obs-status-badge" class="badge-disconnected">
+    <span id="badge-dot">⚪</span>
+    <span id="badge-text">Menghubungkan ke Server...</span>
+  </div>
 
   <!-- Follow / Share Banner -->
   <div id="notification-banner">
@@ -247,41 +282,34 @@
       overlay_like_hearts: true
     };
 
-    const activeAvatars = new Map(); // unique_id -> AvatarObject
+    const activeAvatars = new Map();
     const ttsQueue = [];
     let isSpeaking = false;
     let ws = null;
+    let voicesLoaded = false;
+    let indonesianVoice = null;
 
-    // Cute SVG avatar designs (Slime, Cat, Bear, Robot, Chibi)
+    // Cute SVG avatar designs (Slime, Cat, Bear, Robot)
     const AVATAR_SVGS = [
-      // Slime Chibi
       (color) => `
         <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
           <path d="M 20 80 C 15 50, 25 20, 50 20 C 75 20, 85 50, 80 80 C 75 90, 25 90, 20 80 Z" fill="${color}" />
-          <!-- Eyes -->
           <circle cx="38" cy="50" r="6" fill="#1e293b" />
           <circle cx="62" cy="50" r="6" fill="#1e293b" />
           <circle cx="40" cy="48" r="2" fill="#fff" />
           <circle cx="64" cy="48" r="2" fill="#fff" />
-          <!-- Blush -->
           <ellipse cx="28" cy="58" rx="5" ry="3" fill="#f43f5e" opacity="0.6"/>
           <ellipse cx="72" cy="58" rx="5" ry="3" fill="#f43f5e" opacity="0.6"/>
-          <!-- Smile -->
           <path d="M 45 60 Q 50 67 55 60" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>
         </svg>
       `,
-      // Cute Kitty
       (color) => `
         <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
-          <!-- Ears -->
           <polygon points="25,40 15,10 45,25" fill="${color}" />
           <polygon points="75,40 85,10 55,25" fill="${color}" />
-          <!-- Head -->
           <circle cx="50" cy="55" r="35" fill="${color}" />
-          <!-- Eyes -->
           <circle cx="38" cy="52" r="5" fill="#0f172a" />
           <circle cx="62" cy="52" r="5" fill="#0f172a" />
-          <!-- Nose & Whiskers -->
           <polygon points="50,60 47,56 53,56" fill="#f43f5e" />
           <line x1="25" y1="58" x2="10" y2="56" stroke="#0f172a" stroke-width="2" />
           <line x1="25" y1="62" x2="10" y2="64" stroke="#0f172a" stroke-width="2" />
@@ -289,20 +317,14 @@
           <line x1="75" y1="62" x2="90" y2="64" stroke="#0f172a" stroke-width="2" />
         </svg>
       `,
-      // Friendly Robot
       (color) => `
         <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
-          <!-- Antenna -->
           <line x1="50" y1="20" x2="50" y2="10" stroke="#94a3b8" stroke-width="4"/>
           <circle cx="50" cy="8" r="5" fill="#f59e0b"/>
-          <!-- Head -->
           <rect x="25" y="20" width="50" height="48" rx="14" fill="${color}" />
-          <!-- Visor -->
           <rect x="33" y="32" width="34" height="18" rx="6" fill="#0f172a" />
-          <!-- Eye Glow -->
           <circle cx="42" cy="41" r="3.5" fill="#38bdf8" />
           <circle cx="58" cy="41" r="3.5" fill="#38bdf8" />
-          <!-- Body -->
           <rect x="32" y="70" width="36" height="20" rx="8" fill="#64748b" />
         </svg>
       `
@@ -332,21 +354,71 @@
         window.speechSynthesis.onvoiceschanged = setupVoices;
       }
       startAvatarWalkCycle();
+
+      // Spawn a brief welcome avatar for 5 seconds so streamer sees it immediately in OBS
+      setTimeout(() => {
+        const welcome = spawnOrUpdateAvatar("welcome_bot", "RizTik Overlay", "");
+        if (welcome) {
+          welcome.showSpeech("Overlay OBS Aktif & Siap!");
+          setTimeout(() => {
+            if (activeAvatars.has("welcome_bot")) {
+              activeAvatars.get("welcome_bot").destroy();
+              activeAvatars.delete("welcome_bot");
+            }
+          }, 6000);
+        }
+      }, 800);
     });
 
-    let indonesianVoice = null;
     function setupVoices() {
       if (!('speechSynthesis' in window)) return;
       const voices = window.speechSynthesis.getVoices();
-      indonesianVoice = voices.find(v => v.lang.includes('id') || v.lang.includes('ID')) ||
-                        voices.find(v => v.name.toLowerCase().includes('indonesia')) ||
-                        voices[0];
+      if (voices && voices.length > 0) {
+        voicesLoaded = true;
+        indonesianVoice = voices.find(v => v.lang.includes('id') || v.lang.includes('ID')) ||
+                          voices.find(v => v.name.toLowerCase().includes('indonesia')) ||
+                          voices[0];
+      }
+    }
+
+    function updateBadge(connected, text) {
+      const badge = document.getElementById('obs-status-badge');
+      const dot = document.getElementById('badge-dot');
+      const label = document.getElementById('badge-text');
+
+      badge.style.opacity = "1";
+      if (connected) {
+        badge.className = "badge-connected";
+        dot.innerText = "🟢";
+        label.innerText = text || "OBS Overlay Terhubung (Ready)";
+        // Fade out after 4 seconds so it doesn't clutter the stream
+        setTimeout(() => {
+          badge.style.opacity = "0";
+        }, 4000);
+      } else {
+        badge.className = "badge-disconnected";
+        dot.innerText = "🔴";
+        label.innerText = text || "Terputus dari Server - Menghubungkan ulang...";
+      }
     }
 
     function initWebSocket() {
-      const loc = window.location;
-      const wsUri = (loc.protocol === "https:" ? "wss://" : "ws://") + loc.host + "/ws";
-      ws = new WebSocket(wsUri);
+      // Resolve host safely (handles 127.0.0.1 or localhost)
+      let host = window.location.host;
+      if (!host || host === "") host = "127.0.0.1:8000";
+      const wsUri = "ws://" + host + "/ws";
+
+      try {
+        ws = new WebSocket(wsUri);
+      } catch (err) {
+        updateBadge(false, "Gagal membuka WebSocket");
+        setTimeout(initWebSocket, 2000);
+        return;
+      }
+
+      ws.onopen = () => {
+        updateBadge(true, "OBS Overlay Terhubung (Ready)");
+      };
 
       ws.onmessage = (event) => {
         try {
@@ -366,7 +438,12 @@
       };
 
       ws.onclose = () => {
+        updateBadge(false, "Terputus dari Controller (Mencoba lagi...)");
         setTimeout(initWebSocket, 2000);
+      };
+
+      ws.onerror = () => {
+        updateBadge(false, "Koneksi Error");
       };
     }
 
@@ -402,7 +479,6 @@
           if (overlayConfig.overlay_like_hearts) {
             spawnHeartParticles(data.count || 1);
           }
-          // Avatars do a happy jump when like is tapped
           activeAvatars.forEach(av => av.jump());
           break;
 
@@ -417,12 +493,11 @@
     }
 
     // ==========================================
-    // TEXT-TO-SPEECH (TTS) COMMENT READER
+    // TEXT-TO-SPEECH (TTS) ENGINE FOR OBS
     // ==========================================
     function enqueueTTS(nickname, comment) {
-      if (!comment || comment.length < 2) return;
+      if (!comment || comment.length < 1) return;
       
-      // Replace template
       const fullText = overlayConfig.tts_template
         .replace("{nickname}", nickname)
         .replace("{comment}", comment);
@@ -437,24 +512,29 @@
       const item = ttsQueue.shift();
       isSpeaking = true;
 
-      // Method 1: Web Speech API (Default in OBS CEF)
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(item.text);
-        if (indonesianVoice) utterance.voice = indonesianVoice;
-        utterance.volume = overlayConfig.tts_volume || 1.0;
-        utterance.rate = overlayConfig.tts_speed || 1.0;
-        utterance.lang = "id-ID";
+      // In OBS CEF, speechSynthesis often has no voices.
+      // If voices exist, use Web Speech; otherwise immediately use Google TTS audio.
+      if (voicesLoaded && 'speechSynthesis' in window) {
+        try {
+          const utterance = new SpeechSynthesisUtterance(item.text);
+          if (indonesianVoice) utterance.voice = indonesianVoice;
+          utterance.volume = overlayConfig.tts_volume || 1.0;
+          utterance.rate = overlayConfig.tts_speed || 1.0;
+          utterance.lang = "id-ID";
 
-        utterance.onend = () => {
-          isSpeaking = false;
-          setTimeout(processTTSQueue, 250);
-        };
+          utterance.onend = () => {
+            isSpeaking = false;
+            setTimeout(processTTSQueue, 200);
+          };
 
-        utterance.onerror = () => {
+          utterance.onerror = () => {
+            fallbackGoogleTTS(item.text);
+          };
+
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
           fallbackGoogleTTS(item.text);
-        };
-
-        window.speechSynthesis.speak(utterance);
+        }
       } else {
         fallbackGoogleTTS(item.text);
       }
@@ -467,15 +547,15 @@
       audio.volume = overlayConfig.tts_volume || 1.0;
       audio.onended = () => {
         isSpeaking = false;
-        setTimeout(processTTSQueue, 250);
+        setTimeout(processTTSQueue, 200);
       };
       audio.onerror = () => {
         isSpeaking = false;
-        setTimeout(processTTSQueue, 250);
+        setTimeout(processTTSQueue, 200);
       };
       audio.play().catch(() => {
         isSpeaking = false;
-        setTimeout(processTTSQueue, 250);
+        setTimeout(processTTSQueue, 200);
       });
     }
 
@@ -488,7 +568,7 @@
         this.nickname = nickname;
         this.avatarUrl = avatarUrl;
         this.color = getRandomColor(uniqueId);
-        this.x = Math.random() * (window.innerWidth - 120) + 40;
+        this.x = Math.random() * (window.innerWidth - 140) + 40;
         this.speed = (Math.random() * 0.8 + 0.5) * (Math.random() < 0.5 ? 1 : -1);
         this.speechTimeout = null;
         this.lastActive = Date.now();
@@ -497,7 +577,6 @@
         this.el.className = 'avatar-char';
         this.el.style.left = `${this.x}px`;
 
-        // Pick SVG template
         const svgFunc = AVATAR_SVGS[Math.abs(uniqueId.length) % AVATAR_SVGS.length];
 
         this.el.innerHTML = `
@@ -553,7 +632,7 @@
           if (bubble && bubble.parentNode) {
             bubble.remove();
           }
-        }, 7500);
+        }, 8000);
       }
 
       destroy() {
@@ -569,9 +648,7 @@
         return av;
       }
 
-      // Cap at 25 avatars max on screen
       if (activeAvatars.size >= 25) {
-        // Remove oldest inactive
         const oldestKey = activeAvatars.keys().next().value;
         const oldest = activeAvatars.get(oldestKey);
         oldest.destroy();
@@ -590,11 +667,10 @@
       }
       requestAnimationFrame(animate);
 
-      // Clean inactive avatars every 60s
       setInterval(() => {
         const now = Date.now();
         activeAvatars.forEach((av, key) => {
-          if (now - av.lastActive > 180000) { // 3 minutes inactive
+          if (now - av.lastActive > 180000) {
             av.destroy();
             activeAvatars.delete(key);
           }

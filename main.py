@@ -34,7 +34,7 @@ def global_hotkey_listener():
             if ctrl_pressed and shift_pressed and q_pressed:
                 print("\n[EMERGENCY STOP] Hotkey Ctrl+Shift+Q detected! Draining queue and releasing keys...")
                 queue_mgr.emergency_stop()
-                time.sleep(1.0)  # Debounce hotkey
+                time.sleep(1.0)
         except Exception:
             pass
         time.sleep(0.05)
@@ -44,10 +44,11 @@ def print_banner():
     is_admin_mode = direct_input.is_admin()
     banner = f"""
 ======================================================================
-  TikTok Live Game Controller (TikFinity-Style Local Bridge)
+  TikTok Live Game Controller & OBS Interactive Overlay
 ======================================================================
-  * Web Dashboard  : http://localhost:8000
-  * Status         : Ready
+  * Web Dashboard  : http://localhost:8000 atau http://127.0.0.1:8000
+  * OBS Overlay    : http://localhost:8000/overlay
+  * Status         : Ready & Listening (0.0.0.0:8000)
   * Administrator  : {'[OK] Admin Mode Active' if is_admin_mode else '[WARNING] NOT running as Administrator!'}
   * Panic Shortcut : Ctrl + Shift + Q (Emergency Stop)
 ======================================================================
@@ -65,10 +66,10 @@ def main():
     hotkey_thread = threading.Thread(target=global_hotkey_listener, daemon=True)
     hotkey_thread.start()
 
-    # Run FastAPI web server
+    # Run FastAPI web server binding to 0.0.0.0 so OBS CEF IPv4 and IPv6 localhost both work
     uvicorn.run(
         "app.server:app",
-        host="127.0.0.1",
+        host="0.0.0.0",
         port=8000,
         log_level="info",
         reload=False,
@@ -77,4 +78,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
