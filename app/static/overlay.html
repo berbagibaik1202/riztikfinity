@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBS Interactive TikTok Overlay & TTS</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: transparent;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      position: relative;
+    }
+
+    /* Container for walking characters at the bottom */
+    #characters-stage {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 160px;
+      pointer-events: none;
+    }
+
+    /* Avatar Character Item */
+    .avatar-char {
+      position: absolute;
+      bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 20;
+    }
+
+    /* Nametag above avatar */
+    .avatar-nametag {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(244, 63, 94, 0.5);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      white-space: nowrap;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    /* Speech Bubble for Comments */
+    .speech-bubble {
+      position: absolute;
+      bottom: 95px;
+      background: #ffffff;
+      color: #0f172a;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      max-width: 240px;
+      word-break: break-word;
+      animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 8px 8px 0;
+      border-style: solid;
+      border-color: #ffffff transparent;
+      display: block;
+      width: 0;
+    }
+
+    /* Avatar Body Container */
+    .avatar-body {
+      width: 58px;
+      height: 58px;
+      position: relative;
+      animation: walkBounce 0.45s infinite alternate ease-in-out;
+    }
+
+    @keyframes walkBounce {
+      0% { transform: translateY(0px) rotate(-3deg); }
+      100% { transform: translateY(-7px) rotate(3deg); }
+    }
+
+    @keyframes avatarJump {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-35px) scale(1.15); }
+      100% { transform: translateY(0); }
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.4) translateY(20px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* Floating Gift Balloons */
+    .gift-balloon {
+      position: absolute;
+      bottom: 40px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, rgba(255, 0, 80, 0.92), rgba(244, 63, 94, 0.96));
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      border-radius: 50px;
+      padding: 8px 18px 8px 10px;
+      color: #ffffff;
+      box-shadow: 0 10px 30px rgba(255, 0, 80, 0.5), inset 0 2px 6px rgba(255, 255, 255, 0.4);
+      z-index: 40;
+      animation: floatUp 6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    .gift-balloon-icon {
+      font-size: 28px;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+    }
+
+    .gift-balloon-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .gift-balloon-user {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+
+    .gift-balloon-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #fef08a;
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 0;
+        transform: translateY(0) scale(0.6);
+      }
+      10% {
+        opacity: 1;
+        transform: translateY(-40px) scale(1.05);
+      }
+      85% {
+        opacity: 1;
+        transform: translateY(-80vh) scale(1) translateX(15px);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-95vh) scale(1.2);
+      }
+    }
+
+    /* Floating Tap Hearts */
+    .floating-heart {
+      position: absolute;
+      bottom: 30px;
+      font-size: 26px;
+      z-index: 35;
+      animation: floatHeart 2.5s ease-out forwards;
+      pointer-events: none;
+    }
+
+    @keyframes floatHeart {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(0.6);
+      }
+      50% {
+        opacity: 0.85;
+        transform: translate(calc(-30px + 60px * var(--rand-x)), -250px) scale(1.2);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(calc(-50px + 100px * var(--rand-x)), -500px) scale(1.5);
+      }
+    }
+
+    /* Event Notification Banner (Follow / Share) */
+    #notification-banner {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-100px);
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.6);
+      color: #ffffff;
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 50;
+    }
+
+    #notification-banner.active {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Follow / Share Banner -->
+  <div id="notification-banner">
+    <span id="notif-icon">⭐</span>
+    <span id="notif-text">Nana Permana baru saja mem-follow streamer!</span>
+  </div>
+
+  <!-- Stage for walking avatars -->
+  <div id="characters-stage"></div>
+
+  <script>
+    // Configuration & State
+    let overlayConfig = {
+      tts_enabled: true,
+      tts_volume: 1.0,
+      tts_speed: 1.0,
+      tts_template: "{nickname} berkata: {comment}",
+      overlay_walking_characters: true,
+      overlay_gift_balloons: true,
+      overlay_like_hearts: true
+    };
+
+    const activeAvatars = new Map(); // unique_id -> AvatarObject
+    const ttsQueue = [];
+    let isSpeaking = false;
+    let ws = null;
+
+    // Cute SVG avatar designs (Slime, Cat, Bear, Robot, Chibi)
+    const AVATAR_SVGS = [
+      // Slime Chibi
+      (color) => `
+        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+          <path d="M 20 80 C 15 50, 25 20, 50 20 C 75 20, 85 50, 80 80 C 75 90, 25 90, 20 80 Z" fill="${color}" />
+          <!-- Eyes -->
+          <circle cx="38" cy="50" r="6" fill="#1e293b" />
+          <circle cx="62" cy="50" r="6" fill="#1e293b" />
+          <circle cx="40" cy="48" r="2" fill="#fff" />
+          <circle cx="64" cy="48" r="2" fill="#fff" />
+          <!-- Blush -->
+          <ellipse cx="28" cy="58" rx="5" ry="3" fill="#f43f5e" opacity="0.6"/>
+          <ellipse cx="72" cy="58" rx="5" ry="3" fill="#f43f5e" opacity="0.6"/>
+          <!-- Smile -->
+          <path d="M 45 60 Q 50 67 55 60" stroke="#1e293b" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </svg>
+      `,
+      // Cute Kitty
+      (color) => `
+        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+          <!-- Ears -->
+          <polygon points="25,40 15,10 45,25" fill="${color}" />
+          <polygon points="75,40 85,10 55,25" fill="${color}" />
+          <!-- Head -->
+          <circle cx="50" cy="55" r="35" fill="${color}" />
+          <!-- Eyes -->
+          <circle cx="38" cy="52" r="5" fill="#0f172a" />
+          <circle cx="62" cy="52" r="5" fill="#0f172a" />
+          <!-- Nose & Whiskers -->
+          <polygon points="50,60 47,56 53,56" fill="#f43f5e" />
+          <line x1="25" y1="58" x2="10" y2="56" stroke="#0f172a" stroke-width="2" />
+          <line x1="25" y1="62" x2="10" y2="64" stroke="#0f172a" stroke-width="2" />
+          <line x1="75" y1="58" x2="90" y2="56" stroke="#0f172a" stroke-width="2" />
+          <line x1="75" y1="62" x2="90" y2="64" stroke="#0f172a" stroke-width="2" />
+        </svg>
+      `,
+      // Friendly Robot
+      (color) => `
+        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md">
+          <!-- Antenna -->
+          <line x1="50" y1="20" x2="50" y2="10" stroke="#94a3b8" stroke-width="4"/>
+          <circle cx="50" cy="8" r="5" fill="#f59e0b"/>
+          <!-- Head -->
+          <rect x="25" y="20" width="50" height="48" rx="14" fill="${color}" />
+          <!-- Visor -->
+          <rect x="33" y="32" width="34" height="18" rx="6" fill="#0f172a" />
+          <!-- Eye Glow -->
+          <circle cx="42" cy="41" r="3.5" fill="#38bdf8" />
+          <circle cx="58" cy="41" r="3.5" fill="#38bdf8" />
+          <!-- Body -->
+          <rect x="32" y="70" width="36" height="20" rx="8" fill="#64748b" />
+        </svg>
+      `
+    ];
+
+    const COLOR_PALETTE = [
+      "#f43f5e", "#ec4899", "#d946ef", "#a855f7",
+      "#8b5cf6", "#6366f1", "#3b82f6", "#0ea5e9",
+      "#06b6d4", "#14b8a6", "#10b981", "#84cc16",
+      "#eab308", "#f97316"
+    ];
+
+    function getRandomColor(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      const index = Math.abs(hash) % COLOR_PALETTE.length;
+      return COLOR_PALETTE[index];
+    }
+
+    // Initialize overlay
+    window.addEventListener('DOMContentLoaded', () => {
+      initWebSocket();
+      setupVoices();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = setupVoices;
+      }
+      startAvatarWalkCycle();
+    });
+
+    let indonesianVoice = null;
+    function setupVoices() {
+      if (!('speechSynthesis' in window)) return;
+      const voices = window.speechSynthesis.getVoices();
+      indonesianVoice = voices.find(v => v.lang.includes('id') || v.lang.includes('ID')) ||
+                        voices.find(v => v.name.toLowerCase().includes('indonesia')) ||
+                        voices[0];
+    }
+
+    function initWebSocket() {
+      const loc = window.location;
+      const wsUri = (loc.protocol === "https:" ? "wss://" : "ws://") + loc.host + "/ws";
+      ws = new WebSocket(wsUri);
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "overlay") {
+            handleOverlayEvent(msg.data);
+          } else if (msg.type === "overlay_config") {
+            Object.assign(overlayConfig, msg.data);
+          } else if (msg.type === "init") {
+            if (msg.data && msg.data.overlay_config) {
+              Object.assign(overlayConfig, msg.data.overlay_config);
+            }
+          }
+        } catch (e) {
+          console.error("WS parse error:", e);
+        }
+      };
+
+      ws.onclose = () => {
+        setTimeout(initWebSocket, 2000);
+      };
+    }
+
+    function handleOverlayEvent(data) {
+      if (!data) return;
+
+      switch (data.event) {
+        case "join":
+          if (overlayConfig.overlay_walking_characters) {
+            spawnOrUpdateAvatar(data.unique_id || data.nickname, data.nickname, data.avatar);
+          }
+          break;
+
+        case "comment":
+          if (overlayConfig.overlay_walking_characters) {
+            const avatar = spawnOrUpdateAvatar(data.unique_id || data.nickname, data.nickname, data.avatar);
+            if (avatar) {
+              avatar.showSpeech(data.comment);
+            }
+          }
+          if (overlayConfig.tts_enabled) {
+            enqueueTTS(data.nickname, data.comment);
+          }
+          break;
+
+        case "gift":
+          if (overlayConfig.overlay_gift_balloons) {
+            spawnGiftBalloon(data.nickname, data.gift_name, data.combo);
+          }
+          break;
+
+        case "like":
+          if (overlayConfig.overlay_like_hearts) {
+            spawnHeartParticles(data.count || 1);
+          }
+          // Avatars do a happy jump when like is tapped
+          activeAvatars.forEach(av => av.jump());
+          break;
+
+        case "follow":
+          showNotificationBanner("⭐ " + data.nickname + " mulai mengikuti streamer!");
+          break;
+
+        case "share":
+          showNotificationBanner("🔁 " + data.nickname + " membagikan siaran langsung!");
+          break;
+      }
+    }
+
+    // ==========================================
+    // TEXT-TO-SPEECH (TTS) COMMENT READER
+    // ==========================================
+    function enqueueTTS(nickname, comment) {
+      if (!comment || comment.length < 2) return;
+      
+      // Replace template
+      const fullText = overlayConfig.tts_template
+        .replace("{nickname}", nickname)
+        .replace("{comment}", comment);
+
+      ttsQueue.push({ nickname, text: fullText });
+      processTTSQueue();
+    }
+
+    function processTTSQueue() {
+      if (isSpeaking || ttsQueue.length === 0) return;
+
+      const item = ttsQueue.shift();
+      isSpeaking = true;
+
+      // Method 1: Web Speech API (Default in OBS CEF)
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(item.text);
+        if (indonesianVoice) utterance.voice = indonesianVoice;
+        utterance.volume = overlayConfig.tts_volume || 1.0;
+        utterance.rate = overlayConfig.tts_speed || 1.0;
+        utterance.lang = "id-ID";
+
+        utterance.onend = () => {
+          isSpeaking = false;
+          setTimeout(processTTSQueue, 250);
+        };
+
+        utterance.onerror = () => {
+          fallbackGoogleTTS(item.text);
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } else {
+        fallbackGoogleTTS(item.text);
+      }
+    }
+
+    function fallbackGoogleTTS(text) {
+      const clean = encodeURIComponent(text.substring(0, 100));
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${clean}`;
+      const audio = new Audio(url);
+      audio.volume = overlayConfig.tts_volume || 1.0;
+      audio.onended = () => {
+        isSpeaking = false;
+        setTimeout(processTTSQueue, 250);
+      };
+      audio.onerror = () => {
+        isSpeaking = false;
+        setTimeout(processTTSQueue, 250);
+      };
+      audio.play().catch(() => {
+        isSpeaking = false;
+        setTimeout(processTTSQueue, 250);
+      });
+    }
+
+    // ==========================================
+    // WALKING AVATARS STAGE
+    // ==========================================
+    class AvatarObject {
+      constructor(uniqueId, nickname, avatarUrl) {
+        this.uniqueId = uniqueId;
+        this.nickname = nickname;
+        this.avatarUrl = avatarUrl;
+        this.color = getRandomColor(uniqueId);
+        this.x = Math.random() * (window.innerWidth - 120) + 40;
+        this.speed = (Math.random() * 0.8 + 0.5) * (Math.random() < 0.5 ? 1 : -1);
+        this.speechTimeout = null;
+        this.lastActive = Date.now();
+
+        this.el = document.createElement('div');
+        this.el.className = 'avatar-char';
+        this.el.style.left = `${this.x}px`;
+
+        // Pick SVG template
+        const svgFunc = AVATAR_SVGS[Math.abs(uniqueId.length) % AVATAR_SVGS.length];
+
+        this.el.innerHTML = `
+          <div class="avatar-nametag">
+            <span>🏷️</span>
+            <span>${nickname}</span>
+          </div>
+          <div class="avatar-body">
+            ${svgFunc(this.color)}
+          </div>
+        `;
+
+        document.getElementById('characters-stage').appendChild(this.el);
+      }
+
+      updatePosition() {
+        this.x += this.speed;
+        const maxX = window.innerWidth - 90;
+        if (this.x <= 20) {
+          this.x = 20;
+          this.speed = Math.abs(this.speed);
+          this.el.style.transform = "scaleX(1)";
+        } else if (this.x >= maxX) {
+          this.x = maxX;
+          this.speed = -Math.abs(this.speed);
+          this.el.style.transform = "scaleX(-1)";
+        }
+        this.el.style.left = `${this.x}px`;
+      }
+
+      jump() {
+        const body = this.el.querySelector('.avatar-body');
+        if (body) {
+          body.style.animation = "avatarJump 0.4s ease-out";
+          setTimeout(() => {
+            body.style.animation = "walkBounce 0.45s infinite alternate ease-in-out";
+          }, 450);
+        }
+      }
+
+      showSpeech(text) {
+        this.lastActive = Date.now();
+        let bubble = this.el.querySelector('.speech-bubble');
+        if (!bubble) {
+          bubble = document.createElement('div');
+          bubble.className = 'speech-bubble';
+          this.el.appendChild(bubble);
+        }
+        bubble.innerText = text;
+
+        if (this.speechTimeout) clearTimeout(this.speechTimeout);
+        this.speechTimeout = setTimeout(() => {
+          if (bubble && bubble.parentNode) {
+            bubble.remove();
+          }
+        }, 7500);
+      }
+
+      destroy() {
+        if (this.speechTimeout) clearTimeout(this.speechTimeout);
+        this.el.remove();
+      }
+    }
+
+    function spawnOrUpdateAvatar(uniqueId, nickname, avatarUrl) {
+      if (activeAvatars.has(uniqueId)) {
+        const av = activeAvatars.get(uniqueId);
+        av.lastActive = Date.now();
+        return av;
+      }
+
+      // Cap at 25 avatars max on screen
+      if (activeAvatars.size >= 25) {
+        // Remove oldest inactive
+        const oldestKey = activeAvatars.keys().next().value;
+        const oldest = activeAvatars.get(oldestKey);
+        oldest.destroy();
+        activeAvatars.delete(oldestKey);
+      }
+
+      const av = new AvatarObject(uniqueId, nickname, avatarUrl);
+      activeAvatars.set(uniqueId, av);
+      return av;
+    }
+
+    function startAvatarWalkCycle() {
+      function animate() {
+        activeAvatars.forEach(av => av.updatePosition());
+        requestAnimationFrame(animate);
+      }
+      requestAnimationFrame(animate);
+
+      // Clean inactive avatars every 60s
+      setInterval(() => {
+        const now = Date.now();
+        activeAvatars.forEach((av, key) => {
+          if (now - av.lastActive > 180000) { // 3 minutes inactive
+            av.destroy();
+            activeAvatars.delete(key);
+          }
+        });
+      }, 60000);
+    }
+
+    // ==========================================
+    // FLOATING GIFT BALLOONS
+    // ==========================================
+    function spawnGiftBalloon(nickname, giftName, combo) {
+      const balloon = document.createElement('div');
+      balloon.className = 'gift-balloon';
+      
+      const leftPos = Math.random() * (window.innerWidth - 300) + 50;
+      balloon.style.left = `${leftPos}px`;
+
+      let icon = "🎁";
+      const gLower = giftName.toLowerCase();
+      if (gLower.includes("rose") || gLower.includes("mawar")) icon = "🌹";
+      else if (gLower.includes("doughnut") || gLower.includes("donat")) icon = "🍩";
+      else if (gLower.includes("heart") || gLower.includes("hati")) icon = "💖";
+      else if (gLower.includes("whale") || gLower.includes("paus")) icon = "🐳";
+      else if (gLower.includes("star") || gLower.includes("bintang")) icon = "⭐";
+      else if (gLower.includes("fire") || gLower.includes("api")) icon = "🔥";
+
+      balloon.innerHTML = `
+        <span class="gift-balloon-icon">${icon}</span>
+        <div class="gift-balloon-info">
+          <span class="gift-balloon-user">${nickname}</span>
+          <span class="gift-balloon-name">Mengirim ${giftName} ${combo > 1 ? `(x${combo})` : ''}</span>
+        </div>
+      `;
+
+      document.body.appendChild(balloon);
+      setTimeout(() => balloon.remove(), 6200);
+    }
+
+    // ==========================================
+    // FLOATING TAP-TAP HEARTS
+    // ==========================================
+    function spawnHeartParticles(count) {
+      const hearts = ["❤️", "💖", "💕", "💘", "🔥", "✨"];
+      const n = Math.min(count, 5);
+
+      for (let i = 0; i < n; i++) {
+        setTimeout(() => {
+          const heart = document.createElement('div');
+          heart.className = 'floating-heart';
+          heart.innerText = hearts[Math.floor(Math.random() * hearts.length)];
+          heart.style.right = `${Math.random() * 80 + 30}px`;
+          heart.style.setProperty('--rand-x', Math.random().toFixed(2));
+          document.body.appendChild(heart);
+          setTimeout(() => heart.remove(), 2600);
+        }, i * 120);
+      }
+    }
+
+    // ==========================================
+    // NOTIFICATION BANNER (FOLLOW / SHARE)
+    // ==========================================
+    let bannerTimeout = null;
+    function showNotificationBanner(text) {
+      const banner = document.getElementById('notification-banner');
+      document.getElementById('notif-text').innerText = text;
+      banner.classList.add('active');
+
+      if (bannerTimeout) clearTimeout(bannerTimeout);
+      bannerTimeout = setTimeout(() => {
+        banner.classList.remove('active');
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

@@ -42,6 +42,14 @@ class AppConfig(BaseModel):
     require_roblox_focus: bool = False
     auto_focus_roblox: bool = True
     max_queue_size: int = 50
+    # Overlay & TTS Features
+    tts_enabled: bool = True
+    tts_volume: float = 1.0
+    tts_speed: float = 1.0
+    tts_template: str = "{nickname} berkata: {comment}"
+    overlay_walking_characters: bool = True
+    overlay_gift_balloons: bool = True
+    overlay_like_hearts: bool = True
     rules: List[ActionRule] = []
 
 
@@ -123,6 +131,13 @@ def load_config() -> AppConfig:
             require_roblox_focus=False,
             auto_focus_roblox=True,
             max_queue_size=50,
+            tts_enabled=True,
+            tts_volume=1.0,
+            tts_speed=1.0,
+            tts_template="{nickname} berkata: {comment}",
+            overlay_walking_characters=True,
+            overlay_gift_balloons=True,
+            overlay_like_hearts=True,
             rules=[ActionRule(**r) for r in DEFAULT_RULES],
         )
         save_config(cfg)
@@ -139,6 +154,13 @@ def load_config() -> AppConfig:
             require_roblox_focus=False,
             auto_focus_roblox=True,
             max_queue_size=50,
+            tts_enabled=True,
+            tts_volume=1.0,
+            tts_speed=1.0,
+            tts_template="{nickname} berkata: {comment}",
+            overlay_walking_characters=True,
+            overlay_gift_balloons=True,
+            overlay_like_hearts=True,
             rules=[ActionRule(**r) for r in DEFAULT_RULES],
         )
 

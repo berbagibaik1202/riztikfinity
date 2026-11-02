@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="id" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TikTok Live Game Controller (TikFinity Bridge)</title>
+  <title>TikTok Live Game Controller & OBS Overlay</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -39,15 +39,21 @@
       </div>
       <div>
         <h1 class="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-          TikTok Live Game Controller
-          <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 font-mono">v1.1</span>
+          TikTok Live Controller & OBS Overlay
+          <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-rose-400 font-mono font-bold">v2.0 Interaktif</span>
         </h1>
-        <p class="text-xs text-slate-400">DirectInput Bridge for Roblox & DirectX Games</p>
+        <p class="text-xs text-slate-400">DirectInput Game Bridge + OBS Interactive Overlay & TTS Comment Reader</p>
       </div>
     </div>
 
     <!-- STATUS INDICATORS -->
     <div class="flex items-center flex-wrap gap-2 text-xs">
+      <!-- Overlay Shortcut Link -->
+      <a href="/overlay" target="_blank" class="px-3 py-1.5 rounded-lg bg-cyan-950/70 border border-cyan-800/80 text-cyan-300 font-semibold hover:bg-cyan-900 transition flex items-center gap-1.5">
+        <span>🎨 Buka Overlay OBS</span>
+        <span class="text-[10px] text-cyan-400">↗</span>
+      </a>
+
       <!-- Admin Status -->
       <span id="badge-admin" class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 flex items-center gap-1.5 font-medium">
         <span class="w-2 h-2 rounded-full bg-amber-400"></span> Checking Admin...
@@ -68,7 +74,7 @@
       </span>
 
       <!-- Emergency Panic Button -->
-      <button onclick="emergencyStop()" class="ml-2 px-3 py-1.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold rounded-lg shadow-lg shadow-red-900/50 flex items-center gap-1.5 transition">
+      <button onclick="emergencyStop()" class="ml-1 px-3 py-1.5 bg-red-600 hover:bg-red-500 active:scale-95 text-white font-bold rounded-lg shadow-lg shadow-red-900/50 flex items-center gap-1.5 transition">
         🚨 Emergency Stop
       </button>
     </div>
@@ -110,6 +116,95 @@
               <span>Room ID:</span>
               <span id="room-id-val" class="font-mono text-cyan-400 font-semibold">-</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OBS Overlay & TTS Settings Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            🎨 OBS Overlay & Pembaca Komentar
+          </h2>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 font-semibold">TTS Aktif</span>
+        </div>
+
+        <div class="p-3 bg-slate-950/80 border border-slate-800 rounded-xl text-xs space-y-2">
+          <div class="flex justify-between items-center text-slate-300">
+            <span>Link Browser Source OBS:</span>
+            <button onclick="copyOverlayUrl()" class="text-cyan-400 hover:text-cyan-300 text-[11px] font-semibold underline">
+              Salin URL
+            </button>
+          </div>
+          <div class="bg-slate-900 px-3 py-1.5 rounded-lg font-mono text-[11px] text-cyan-300 select-all border border-slate-800">
+            http://localhost:8000/overlay
+          </div>
+          <p class="text-[10px] text-slate-500">Tambahkan di OBS: <b>Add Source (+) -> Browser</b>, masukkan URL di atas.</p>
+        </div>
+
+        <!-- TTS Controls -->
+        <div class="space-y-3 pt-1">
+          <label class="flex items-center justify-between cursor-pointer">
+            <div>
+              <span class="text-xs text-slate-200 font-medium block">📢 Pembaca Komentar Otomatis (TTS)</span>
+              <span class="text-[10px] text-slate-400">Bacakan komentar penonton dengan suara robot Bahasa Indonesia</span>
+            </div>
+            <input type="checkbox" id="check-tts-enabled" onchange="saveOverlayConfig()" class="w-4 h-4 rounded text-rose-600 bg-slate-950 border-slate-800">
+          </label>
+
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Format Kalimat TTS</label>
+            <input type="text" id="input-tts-template" value="{nickname} berkata: {comment}" onchange="saveOverlayConfig()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono">
+            <span class="text-[9px] text-slate-500">Variabel: {nickname}, {comment}</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Volume Suara</span>
+                <span id="tts-vol-val" class="text-cyan-400">100%</span>
+              </div>
+              <input type="range" id="input-tts-volume" min="0" max="1" step="0.1" value="1" oninput="document.getElementById('tts-vol-val').innerText=Math.round(this.value*100)+'%'" onchange="saveOverlayConfig()" class="w-full accent-rose-500 bg-slate-950 rounded-lg">
+            </div>
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Kecepatan Bicara</span>
+                <span id="tts-spd-val" class="text-cyan-400">1.0x</span>
+              </div>
+              <input type="range" id="input-tts-speed" min="0.8" max="1.4" step="0.1" value="1.0" oninput="document.getElementById('tts-spd-val').innerText=this.value+'x'" onchange="saveOverlayConfig()" class="w-full accent-rose-500 bg-slate-950 rounded-lg">
+            </div>
+          </div>
+        </div>
+
+        <!-- Overlay Visuals Toggles -->
+        <div class="space-y-2 pt-2 border-t border-slate-800/80">
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-xs text-slate-300">👾 Karakter Berjalan Penonton (Nametag & Balon Chat)</span>
+            <input type="checkbox" id="check-overlay-chars" onchange="saveOverlayConfig()" checked class="w-4 h-4 rounded text-rose-600 bg-slate-950 border-slate-800">
+          </label>
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-xs text-slate-300">🎈 Gelembung Balon Hadiah Gift Melayang</span>
+            <input type="checkbox" id="check-overlay-balloons" onchange="saveOverlayConfig()" checked class="w-4 h-4 rounded text-rose-600 bg-slate-950 border-slate-800">
+          </label>
+          <label class="flex items-center justify-between cursor-pointer">
+            <span class="text-xs text-slate-300">❤️ Partikel Hati Tap-Tap Layar (Likes)</span>
+            <input type="checkbox" id="check-overlay-hearts" onchange="saveOverlayConfig()" checked class="w-4 h-4 rounded text-rose-600 bg-slate-950 border-slate-800">
+          </label>
+        </div>
+
+        <!-- Test Simulation Buttons -->
+        <div class="pt-2 border-t border-slate-800/80 space-y-2">
+          <span class="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">Uji Coba Visual & Suara OBS</span>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="testOverlayEvent('comment')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-lg text-[11px] font-semibold text-rose-300 transition text-center">
+              💬 Test Suara TTS
+            </button>
+            <button onclick="testOverlayEvent('gift')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-lg text-[11px] font-semibold text-amber-300 transition text-center">
+              🎈 Test Balon Gift
+            </button>
+            <button onclick="testOverlayEvent('join')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-lg text-[11px] font-semibold text-cyan-300 transition text-center">
+              👾 Test Karakter
+            </button>
           </div>
         </div>
       </div>
@@ -332,6 +427,7 @@
     window.addEventListener('DOMContentLoaded', async () => {
       await fetchStatus();
       await fetchRules();
+      await fetchOverlaySettings();
       initWebSocket();
       setInterval(fetchStatus, 3000);
     });
@@ -441,6 +537,64 @@
       } catch (e) {
         console.error(e);
       }
+    }
+
+    async function fetchOverlaySettings() {
+      try {
+        const res = await fetch('/api/overlay/settings');
+        const data = await res.json();
+        document.getElementById('check-tts-enabled').checked = data.tts_enabled;
+        document.getElementById('input-tts-template').value = data.tts_template || "{nickname} berkata: {comment}";
+        document.getElementById('input-tts-volume').value = data.tts_volume ?? 1.0;
+        document.getElementById('tts-vol-val').innerText = Math.round((data.tts_volume ?? 1.0) * 100) + "%";
+        document.getElementById('input-tts-speed').value = data.tts_speed ?? 1.0;
+        document.getElementById('tts-spd-val').innerText = (data.tts_speed ?? 1.0) + "x";
+        document.getElementById('check-overlay-chars').checked = data.overlay_walking_characters !== false;
+        document.getElementById('check-overlay-balloons').checked = data.overlay_gift_balloons !== false;
+        document.getElementById('check-overlay-hearts').checked = data.overlay_like_hearts !== false;
+      } catch (e) {
+        console.error("Error fetching overlay settings:", e);
+      }
+    }
+
+    async function saveOverlayConfig() {
+      const payload = {
+        tts_enabled: document.getElementById('check-tts-enabled').checked,
+        tts_volume: parseFloat(document.getElementById('input-tts-volume').value),
+        tts_speed: parseFloat(document.getElementById('input-tts-speed').value),
+        tts_template: document.getElementById('input-tts-template').value.trim(),
+        overlay_walking_characters: document.getElementById('check-overlay-chars').checked,
+        overlay_gift_balloons: document.getElementById('check-overlay-balloons').checked,
+        overlay_like_hearts: document.getElementById('check-overlay-hearts').checked
+      };
+
+      await fetch('/api/overlay/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    async function testOverlayEvent(type) {
+      const payload = {
+        event_type: type,
+        nickname: "Penonton_Setia",
+        text: "Halo bang! Keren banget streamernya, semangat terus!",
+        gift_name: "Rose",
+        combo: 5
+      };
+      await fetch('/api/overlay/test-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    }
+
+    function copyOverlayUrl() {
+      const url = "http://localhost:8000/overlay";
+      navigator.clipboard.writeText(url).then(() => {
+        alert("Link Overlay berhasil disalin: " + url + "\n\nTempelkan di OBS Studio via Add Source (+) -> Browser!");
+      });
     }
 
     function renderRules() {

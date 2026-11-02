@@ -1,11 +1,11 @@
 """
-FastAPI Server for Local Web Dashboard & WebSocket Live Feed.
+FastAPI Server for Local Web Dashboard, WebSocket Live Feed, & OBS Overlay.
 """
 
 import asyncio
 from contextlib import asynccontextmanager
 import os
-from typing import List
+from typing import List, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -33,15 +33,16 @@ active_websockets: List[WebSocket] = []
 
 
 async def broadcast_ws(message: dict):
-    """Send JSON message to all connected dashboard websockets."""
+    """Send JSON message to all connected dashboard and OBS websockets."""
     for ws in list(active_websockets):
         try:
             await ws.send_json(message)
         except Exception:
-            active_websockets.remove(ws)
+            if ws in active_websockets:
+                active_websockets.remove(ws)
 
 
-# Hook up queue logs and connection status to WebSocket broadcast
+# Hook up queue logs, connection status, and overlay events to WebSocket broadcast
 queue_mgr.add_log_listener(lambda log: asyncio.create_task(broadcast_ws({"type": "log", "data": log})))
 tiktok_mgr.add_state_listener(
     lambda state, room_id: asyncio.create_task(
@@ -52,6 +53,14 @@ tiktok_mgr.add_state_listener(
                 "room_id": room_id,
                 "user": tiktok_mgr.current_user,
             },
+        })
+    )
+)
+tiktok_mgr.add_overlay_listener(
+    lambda payload: asyncio.create_task(
+        broadcast_ws({
+            "type": "overlay",
+            "data": payload,
         })
     )
 )
@@ -67,7 +76,7 @@ async def lifespan(app: FastAPI):
     await queue_mgr.stop()
 
 
-app = FastAPI(title="TikTok Live Game Controller", lifespan=lifespan)
+app = FastAPI(title="TikTok Live Game Controller & OBS Overlay", lifespan=lifespan)
 
 
 class ConnectRequest(BaseModel):
@@ -87,12 +96,38 @@ class ConfigUpdateRequest(BaseModel):
     rules: List[ActionRule]
 
 
+class OverlaySettingsRequest(BaseModel):
+    tts_enabled: bool
+    tts_volume: float
+    tts_speed: float
+    tts_template: str
+    overlay_walking_characters: bool
+    overlay_gift_balloons: bool
+    overlay_like_hearts: bool
+
+
+class TestOverlayEventRequest(BaseModel):
+    event_type: str  # comment, gift, join, like
+    nickname: str = "Penonton_Setia"
+    text: Optional[str] = "Halo bang! Semangat terus live-nya!"
+    gift_name: Optional[str] = "Rose"
+    combo: int = 1
+
+
 @app.get("/")
 async def get_index():
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return {"message": "Dashboard UI file not found. Please create app/static/index.html"}
+    return {"message": "Dashboard UI file not found."}
+
+
+@app.get("/overlay")
+async def get_overlay():
+    overlay_path = os.path.join(STATIC_DIR, "overlay.html")
+    if os.path.exists(overlay_path):
+        return FileResponse(overlay_path)
+    return {"message": "Overlay UI file not found."}
 
 
 @app.get("/api/status")
@@ -108,6 +143,7 @@ async def get_status():
         "queue_size": queue_mgr.queue.qsize(),
         "require_roblox_focus": queue_mgr.require_roblox_focus,
         "auto_focus_roblox": queue_mgr.auto_focus_roblox,
+        "tts_enabled": config.tts_enabled,
     }
 
 
@@ -152,11 +188,94 @@ async def save_rules(req: ConfigUpdateRequest):
     return {"success": True, "rules_count": len(req.rules)}
 
 
+@app.get("/api/overlay/settings")
+async def get_overlay_settings():
+    return {
+        "tts_enabled": config.tts_enabled,
+        "tts_volume": config.tts_volume,
+        "tts_speed": config.tts_speed,
+        "tts_template": config.tts_template,
+        "overlay_walking_characters": config.overlay_walking_characters,
+        "overlay_gift_balloons": config.overlay_gift_balloons,
+        "overlay_like_hearts": config.overlay_like_hearts,
+    }
+
+
+@app.post("/api/overlay/settings")
+async def save_overlay_settings(req: OverlaySettingsRequest):
+    config.tts_enabled = req.tts_enabled
+    config.tts_volume = req.tts_volume
+    config.tts_speed = req.tts_speed
+    config.tts_template = req.tts_template
+    config.overlay_walking_characters = req.overlay_walking_characters
+    config.overlay_gift_balloons = req.overlay_gift_balloons
+    config.overlay_like_hearts = req.overlay_like_hearts
+    save_config(config)
+
+    # Broadcast updated settings to overlay websocket
+    await broadcast_ws({
+        "type": "overlay_config",
+        "data": {
+            "tts_enabled": config.tts_enabled,
+            "tts_volume": config.tts_volume,
+            "tts_speed": config.tts_speed,
+            "tts_template": config.tts_template,
+            "overlay_walking_characters": config.overlay_walking_characters,
+            "overlay_gift_balloons": config.overlay_gift_balloons,
+            "overlay_like_hearts": config.overlay_like_hearts,
+        },
+    })
+    return {"success": True}
+
+
+@app.post("/api/overlay/test-event")
+async def test_overlay_event(req: TestOverlayEventRequest):
+    """Test overlay visuals & TTS without live TikTok stream."""
+    if req.event_type == "comment":
+        await tiktok_mgr.broadcast_overlay_event(
+            "comment",
+            {
+                "nickname": req.nickname,
+                "unique_id": req.nickname.lower(),
+                "avatar": "",
+                "comment": req.text or "Komentar uji coba TTS!",
+            },
+        )
+    elif req.event_type == "gift":
+        await tiktok_mgr.broadcast_overlay_event(
+            "gift",
+            {
+                "nickname": req.nickname,
+                "unique_id": req.nickname.lower(),
+                "avatar": "",
+                "gift_name": req.gift_name or "Rose",
+                "combo": req.combo,
+            },
+        )
+    elif req.event_type == "join":
+        await tiktok_mgr.broadcast_overlay_event(
+            "join",
+            {
+                "nickname": req.nickname,
+                "unique_id": req.nickname.lower(),
+                "avatar": "",
+            },
+        )
+    elif req.event_type == "like":
+        await tiktok_mgr.broadcast_overlay_event(
+            "like",
+            {
+                "nickname": req.nickname,
+                "unique_id": req.nickname.lower(),
+                "count": 5,
+            },
+        )
+    return {"success": True, "event": req.event_type}
+
+
 @app.post("/api/test-key")
 async def test_key(req: TestKeyRequest):
     key = req.key.lower().strip()
-
-    # Try bringing Roblox to focus before testing if available
     direct_input.focus_roblox()
     await asyncio.sleep(0.08)
 
@@ -196,6 +315,15 @@ async def websocket_endpoint(websocket: WebSocket):
             "is_roblox_focused": direct_input.is_roblox_focused(),
             "roblox_running": direct_input.find_roblox_window() is not None,
             "active_window": direct_input.get_foreground_window_title(),
+            "overlay_config": {
+                "tts_enabled": config.tts_enabled,
+                "tts_volume": config.tts_volume,
+                "tts_speed": config.tts_speed,
+                "tts_template": config.tts_template,
+                "overlay_walking_characters": config.overlay_walking_characters,
+                "overlay_gift_balloons": config.overlay_gift_balloons,
+                "overlay_like_hearts": config.overlay_like_hearts,
+            },
         },
     })
     try:
