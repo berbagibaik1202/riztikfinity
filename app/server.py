@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 import os
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -135,6 +135,13 @@ class DuplicateProfileRequest(BaseModel):
 
 class ImportProfileRequest(BaseModel):
     data: dict
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def get_favicon():
+    """Return SVG favicon to prevent 404 logs in terminal/browser."""
+    svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎮</text></svg>'
+    return Response(content=svg, media_type="image/svg+xml")
 
 
 @app.get("/")

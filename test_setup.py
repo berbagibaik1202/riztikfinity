@@ -52,6 +52,7 @@ def test_static_and_routes():
     assert "/overlay" in routes, "Missing /overlay route"
     assert "/comments" in routes, "Missing /comments route"
     assert "/chat" in routes, "Missing /chat route"
+    assert "/favicon.ico" in routes, "Missing /favicon.ico route"
     assert "/api/profiles" in routes, "Missing /api/profiles route"
     assert "/api/profiles/select" in routes, "Missing /api/profiles/select route"
 

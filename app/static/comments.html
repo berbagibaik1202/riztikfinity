@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
   <title>OBS Live Chat & Comment List Overlay</title>
   <style>
     * {
@@ -153,6 +154,11 @@
     <span id="badge-text">Menghubungkan ke Server...</span>
   </div>
 
+  <!-- Floating Quick Test Button (Klik untuk uji coba kirim komentar) -->
+  <button id="quick-test-btn" onclick="sendTestComment()" style="position: absolute; top: 12px; right: 12px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255, 255, 255, 0.2); color: #e2e8f0; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 999px; cursor: pointer; z-index: 100; backdrop-filter: blur(8px); transition: opacity 0.3s; opacity: 0.75;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.75'" title="Kirim komentar uji coba">
+    💬 Uji Kirim Komentar
+  </button>
+
   <!-- Chat List Container -->
   <div id="chat-container"></div>
 
@@ -237,6 +243,10 @@
             if (msg.data.event === "comment") {
               addComment(msg.data);
             }
+          } else if (msg.type === "comment" && msg.data) {
+            addComment(msg.data);
+          } else if (msg.comment) {
+            addComment(msg);
           }
         } catch (e) {
           console.error("WS error:", e);
@@ -287,6 +297,7 @@
       card.appendChild(avatarEl);
       card.appendChild(bodyEl);
       chatContainer.appendChild(card);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
 
       // Enforce limit of visible comments
       while (chatContainer.children.length > MAX_COMMENTS) {
@@ -295,9 +306,41 @@
     }
 
     function escapeHtml(text) {
+      if (!text) return "";
       const div = document.createElement('div');
       div.innerText = text;
       return div.innerHTML;
+    }
+
+    async function sendTestComment() {
+      const sampleNames = ["Rizky_Gamer", "Nabila_Sari", "Budi_Roblox", "Siti_Chibi", "Gamer_Sejati", "Aldi_Pro"];
+      const sampleChats = [
+        "Halo bang! Keren banget live streamernya!",
+        "Semangat terus live-nya bang!",
+        "Gamenya seru banget, apa nama gamenya bang?",
+        "Mantap pol! Semangat obby-nya!",
+        "Komentar dari penonton setia TikTok!"
+      ];
+      const randomName = sampleNames[Math.floor(Math.random() * sampleNames.length)];
+      const randomChat = sampleChats[Math.floor(Math.random() * sampleChats.length)];
+
+      try {
+        await fetch('/api/overlay/test-event', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: "comment",
+            nickname: randomName,
+            text: randomChat
+          })
+        });
+      } catch (e) {
+        // Direct local fallback
+        addComment({
+          nickname: randomName,
+          comment: randomChat
+        });
+      }
     }
   </script>
 </body>
