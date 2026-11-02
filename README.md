@@ -22,6 +22,14 @@ Aplikasi desktop lokal (*local agent*) untuk menghubungkan event siaran langsung
    * Tekan pintasan global **`Ctrl + Shift + Q`** kapan saja (atau klik tombol merah di Web Dashboard) untuk langsung membatalkan seluruh antrean aksi dan melepas semua tombol yang tertahan.
 6. **Local Web Dashboard (`http://localhost:8000`):**
    * UI modern & responsif (Dark Mode) untuk manajemen rules, uji tombol manual (*Test Key*), monitoring status koneksi, dan log terminal *real-time* via WebSocket.
+7. **Interactive OBS Visual Overlay (`http://localhost:8000/overlay`):**
+   * Karakter penonton berjalan bolak-balik (bouncing SVG) saat penonton join live dengan ukuran tetap dan nama tidak terbalik.
+   * Balon hadiah gift melayang dengan animasi tali & keranjang info combo.
+   * Partikel hati tap-tap melayang saat penonton like stream.
+8. **Pembaca Komentar Otomatis (TTS Voice Reader):**
+   * Membacakan pesan chat penonton dengan suara robot Bahasa Indonesia, lengkap dengan pengaturan volume, kecepatan, dan template kalimat.
+9. **Dedicated OBS Live Comment List (`http://localhost:8000/comments`):**
+   * Kotak daftar komentar vertikal transparan untuk OBS dengan format `Nama User : Komentarnya` dan badge inisial/avatar warna-warni.
 
 ---
 
@@ -36,8 +44,10 @@ tikinfinity/
 │   ├── tiktok_client.py     # TikTokLive client & event router
 │   ├── server.py            # FastAPI backend & WebSocket live bridge
 │   └── static/
-│       └── index.html       # Web Dashboard lokal (Tailwind CSS)
-├── prd.md                   # Product Requirement Document
+│       ├── index.html       # Web Dashboard lokal (Tailwind CSS)
+│       ├── overlay.html     # Interactive OBS Overlay (Karakter, Balon, TTS)
+│       └── comments.html    # Dedicated OBS Live Comment List Box
+├── prd.md                   # Product Requirement Document (v2.0)
 ├── rules.json               # Konfigurasi aksi lokal (auto-generated)
 ├── requirements.txt         # Daftar pustaka Python
 ├── run.bat                  # Script peluncur sekali klik (Windows)

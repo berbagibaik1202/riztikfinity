@@ -47,7 +47,8 @@ def print_banner():
   TikTok Live Game Controller & OBS Interactive Overlay
 ======================================================================
   * Web Dashboard  : http://localhost:8000 atau http://127.0.0.1:8000
-  * OBS Overlay    : http://localhost:8000/overlay
+  * OBS Overlay    : http://localhost:8000/overlay (Karakter & Balon)
+  * OBS Comment Box: http://localhost:8000/comments (Daftar Chat Live)
   * Status         : Ready & Listening (0.0.0.0:8000)
   * Administrator  : {'[OK] Admin Mode Active' if is_admin_mode else '[WARNING] NOT running as Administrator!'}
   * Panic Shortcut : Ctrl + Shift + Q (Emergency Stop)

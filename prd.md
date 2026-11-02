@@ -1,156 +1,257 @@
-# Product Requirement Document (PRD)
-## TikTok Live Game Controller (TikFinity-Style Local Bridge)
+# Product Requirement Document (PRD) v2.0
+## TikTok Live Game Controller & Interactive OBS Streaming Suite (RizTik)
 
 ---
 
 ### 1. Executive Summary & Objective
 
 #### 1.1 Ringkasan Produk
-Aplikasi **TikTok Live Game Controller** adalah perangkat lunak desktop (*local agent*) yang menghubungkan siaran langsung TikTok Live dengan simulasi kontrol input keyboard (*DirectInput*) secara *real-time*. Aplikasi ini memungkinkan penonton memengaruhi pergerakan karakter di game Roblox (seperti game Obby, Survival, atau Driving) melalui interaksi pemberian gift, chat command, maupun like.
+Aplikasi **RizTik (TikTok Live Game Controller & Interactive OBS Streaming Suite)** adalah perangkat lunak desktop lokal (*local bridge & overlay suite*) yang menghubungkan siaran langsung TikTok Live dengan dua modul utama:
+1. **DirectInput Game Controller:** Mengubah interaksi penonton (Gift, Like, Chat) menjadi penekanan tombol keyboard hardware nyata (*DirectInput Scancode*) untuk mengendalikan game PC seperti Roblox (Obby, Survival, Racing).
+2. **Interactive OBS Streaming Overlay & TTS Suite:** Menyediakan visual interaktif real-time untuk OBS Studio berupa:
+   * **Karakter penonton berjalan** di bagian bawah layar saat ada penonton join (dengan nametag dan balon chat yang tidak terbalik).
+   * **Balon hadiah gift melayang** dengan hitungan combo.
+   * **Partikel love tap-tap** saat penonton memberi like.
+   * **Pembaca komentar otomatis (TTS)** dengan suara robot Bahasa Indonesia.
+   * **Halaman daftar komentar live transparan** (`/comments`) dengan format `Nama User : Komentarnya`.
 
-#### 1.2 Tujuan Bisnis & Pengguna
-* **Tingkat Keterlibatan (Engagement):** Meningkatkan interaksi dan retensi penonton pada sesi TikTok Live gaming.
-* **Monetisasi Streamer:** Mendorong pemberian hadiah (*gift*) dengan memberikan dampak mekanik langsung ke dalam game.
-* **Kemudahan Konfigurasi:** Menyediakan antarmuka lokal mandiri yang tidak bergantung pada langganan berbayar pihak ketiga, minim latensi, dan mudah disesuaikan.
+#### 1.2 Tujuan Bisnis & Pengalaman Pengguna
+* **Interaktivitas Maksimal:** Memberikan sensasi visual langsung kepada penonton bahwa kehadiran, komentar, dan gift mereka berdampak instan di layar siaran dan di dalam game streamer.
+* **Monetisasi Tanpa Biaya Berlangganan:** Menggantikan layanan pihak ketiga berbayar (seperti TikFinity PRO) dengan solusi lokal mandiri yang gratis, aman, minim latensi, dan bebas kuota.
+* **Kemudahan Penggunaan Streamer:** Menghubungkan OBS dan game dalam hitungan detik melalui antarmuka web lokal (`http://localhost:8000`) dan link Browser Source OBS transparan.
 
 ---
 
 ### 2. Target Pengguna (User Persona)
-* **Streamer Game TikTok (Pemula hingga Menengah):** Menjalankan sesi live di PC/laptop dengan dual-window (Roblox + Live Studio/OBS), membutuhkan otomatisasi input yang responsif tanpa konfigurasi coding manual.
-* **Kreator Konten Interaktif:** Menciptakan format konten tantangan unik (contoh: *"Menang Obby Roblox hanya jika penonton tidak mengirim mawar"*).
+* **Streamer Game TikTok (Roblox, Minecraft, GTA, dll.):** Streamer yang mengadakan tantangan interaktif bersama penonton (contoh: *"Karakter jalan sendiri kalau dikirim Mawar!*").
+* **Streamer Live Chatting / Reaksi:** Kreator yang memerlukan pembaca komentar otomatis suara robot (TTS) dan kotak live chat yang estetik di layar OBS tanpa gameplay.
+* **Kreator Pemula:** Pengguna yang awam teknis dan membutuhkan setup instan sekali klik tanpa harus melakukan coding.
 
 ---
 
-### 3. Scope & Batasan Teknis (Constraints)
+### 3. Scope & Batasan Teknis (Technical Scope)
 
-#### 3.1 In-Scope (MVP)
-* Integrasi pendengar event TikTok Live via WebSocket stream publik (Gift, Likes, Chat) langsung dari TikTok Server.
-* Sistem antrean aksi (*Action Queue*) untuk menangani lonjakan spam gift.
-* Simulator input keyboard berbasis *DirectInput* (kompatibel dengan DirectX/Roblox Client).
-* Web UI Dashboard lokal (`http://localhost:8000`) untuk pengaturan koneksi, pemetaan aksi, dan monitoring status.
-* Penyimpanan konfigurasi profil aksi ke format lokal (`JSON`).
+#### 3.1 In-Scope (Sudah Diimplementasikan)
+* Koneksi langsung ke WebSocket publik TikTok Live tanpa perlu login akun atau TikTok Studio.
+* Antrean aksi FIFO (*Action Queue*) dengan spam throttling, combo multiplier, dan cooldown per aturan.
+* Simulator tombol keyboard hardware *DirectInput* berbasis Win32 Scancode (kompatibel penuh dengan DirectX dan Roblox Client).
+* Otomatis memfokuskan jendela game (*Auto-Focus Roblox*) sebelum penekanan tombol dilakukan.
+* Hotkey darurat tingkat OS (*Global Panic Button*: `Ctrl + Shift + Q`) untuk membatalkan antrean dan melepas semua tombol.
+* Web Dashboard lokal (`http://localhost:8000`) untuk konfigurasi rules, kontrol TTS, dan pemantauan log real-time.
+* Halaman OBS Overlay Visual Interaktif (`http://localhost:8000/overlay`):
+  * Karakter penonton berjalan bolak-balik dengan ukuran tetap (*fixed size*) dan arah teks normal (*anti-mirrored*).
+  * Balon hadiah gift melayang dengan tali dan keranjang animasi.
+  * Partikel love bertebaran saat tap-tap layar.
+  * Balon obrolan (*speech bubble*) di atas kepala karakter saat berkomentar.
+* Pembaca suara komentar otomatis (*Text-To-Speech / TTS*) Bahasa Indonesia dengan template kustom via Web Speech API.
+* Halaman OBS Dedicated Live Comment List (`http://localhost:8000/comments`):
+  * Daftar komentar bertumpuk dengan format standar: `Nama User : Komentarnya`.
+  * Background 100% transparan, glassmorphism card, inisial/avatar badge warna-warni, auto-cap 20 item, dan anti-cache header untuk OBS CEF.
 
-#### 3.2 Out-of-Scope (Fase Selanjutnya)
-* Kontrol via Android/iOS secara langsung tanpa PC perantara.
-* Penulisan/pembacaan memori game internal (menghindari deteksi anti-cheat Byfron/Hyperion).
-* Integrasi monetisasi atau payment gateway pihak ketiga di luar ekosistem TikTok resmi.
+#### 3.2 Out-of-Scope (Bukan Target Saat Ini)
+* Injeksi memori langsung ke proses game internal (menghindari deteksi anti-cheat Byfron/Hyperion).
+* Kontrol game via perangkat mobile (Android/iOS) secara native tanpa perantara PC.
+* Sistem pembayaran / payment gateway di luar ekosistem resmi TikTok Live.
 
 ---
 
 ### 4. Arsitektur Sistem & Alur Data
 
 ```
-┌─────────────────────────┐
-│     TikTok Server       │
-└────────────┬────────────┘
-             │ WebSocket Event (Gift/Like/Chat)
-             ▼
-┌─────────────────────────┐
-│  TikTok Listener Agent  │  <-- Menangkap payload live room publik via internet
-└────────────┬────────────┘
-             │ Raw JSON Event
-             ▼
-┌─────────────────────────┐
-│     Rule Matcher &      │  <-- Memeriksa filter (Gift Name, Min. Count, User)
-│      Action Queue       │  <-- Menjaga throttling & urutan penekanan FIFO
-└────────────┬────────────┘
-             │ Key Press Event Payload
-             ▼
-┌─────────────────────────┐
-│  DirectInput Simulator  │  <-- Mengirim scancode OS ke jendela aktif (Roblox)
-└─────────────────────────┘
+                            ┌─────────────────────────┐
+                            │     TikTok Live API     │
+                            │   (Room Webcast Stream) │
+                            └────────────┬────────────┘
+                                         │ WebSocket Payload (Gift, Like, Chat, Join)
+                                         ▼
+                            ┌─────────────────────────┐
+                            │      TikTokManager      │
+                            │  (app/tiktok_client.py) │
+                            └────────────┬────────────┘
+                                         │
+                 ┌───────────────────────┴───────────────────────┐
+                 │                                               │
+                 ▼ (Game Actions)                                ▼ (Overlay Events)
+      ┌─────────────────────────┐                     ┌─────────────────────────┐
+      │      QueueManager       │                     │    FastAPI WebSocket    │
+      │  (FIFO, Cooldown, Mult) │                     │     (ws://.../ws)       │
+      └──────────┬──────────────┘                     └────────────┬────────────┘
+                 │                                                 │
+                 ▼                                 ┌───────────────┴───────────────┐
+      ┌─────────────────────────┐                  ▼                               ▼
+      │  DirectInput Simulator  │       ┌─────────────────────┐         ┌─────────────────────┐
+      │  Auto-Focus Window &    │       │     OBS Overlay     │         │   OBS Comment Box   │
+      │  Hardware Scancodes     │       │   (/overlay.html)   │         │  (/comments.html)   │
+      └──────────┬──────────────┘       │  - Karakter Berjalan│         │  - Format:          │
+                 │                      │  - Balon Gift       │         │    User : Komentar  │
+                 ▼                      │  - Partikel Likes   │         │  - List Vertikal    │
+      ┌─────────────────────────┐       │  - TTS Voice Reader │         │  - Transparan       │
+      │   Roblox Game Client    │       └─────────────────────┘         └─────────────────────┘
+      └─────────────────────────┘
 ```
 
 ---
 
-### 5. Fitur Utama & Kebutuhan Fungsional (Functional Requirements)
+### 5. Kebutuhan Fungsional (Functional Requirements)
 
-#### 5.1 Modul Koneksi TikTok (Connection Engine)
-* **FR-1.1:** Pengguna dapat memasukkan nama pengguna TikTok (`unique_id`) tanpa tanda `@`.
-* **FR-1.2:** Sistem harus dapat memverifikasi status siaran (apakah akun sedang LIVE atau OFFLINE).
-* **FR-1.3:** Terdapat indikator status koneksi real-time (*Connected*, *Disconnected*, *Reconnecting*, *Room ID*).
-* **FR-1.4:** Sistem memiliki mekanisme *auto-reconnect* jika koneksi WebSocket terputus sewaktu-waktu.
+#### 5.1 Modul Koneksi TikTok Live (FR-1)
+* **FR-1.1:** Pengguna memasukkan username TikTok tanpa tanda `@` dan sistem langsung menyambungkan ke room live.
+* **FR-1.2:** Menampilkan status koneksi real-time (*Connecting*, *Connected*, *Disconnected*, *Room ID*).
+* **FR-1.3:** Terdapat tombol *Disconnect* untuk memutuskan koneksi secara manual.
+* **FR-1.4:** Mekanisme penanganan error dan auto-reconnect saat stream terputus.
 
-#### 5.2 Modul Pemetaan Aturan (Rule Engine & Triggers)
-* **FR-2.1: Pemetaan Berbasis Pemicu:**
-  * **Gift Trigger:** Memilih jenis gift (contoh: Rose, Doughnut, Whale) beserta multiplier/combo.
-  * **Chat Trigger:** Memfilter pesan chat tertentu (contoh: teks `!kiri`, `!lompat`).
-  * **Like Milestone:** Menjalankan aksi setiap kelipatan $X$ like (opsional).
-* **FR-2.2: Konfigurasi Aksi Keyboard:**
-  * **Tombol Target:** Mendukung tombol standar (`W`, `A`, `S`, `D`, `Space`, `Shift`, `E`, dll.).
-  * **Mode Eksekusi:** *Hold* (tahan selama $N$ detik) atau *Single Tap/Spam*.
-  * **Durasi Tahan:** Input nilai numerik dalam satuan detik (default: `0.3s`).
-  * **Prioritas/Cooldown:** Menetapkan durasi cooldown untuk mencegah tombol tertahan terus-menerus.
+#### 5.2 Modul Pemetaan Aturan Game (FR-2)
+* **FR-2.1: Trigger Types:**
+  * **Gift Trigger:** Mencocokkan nama hadiah (contoh: `Rose`, `Doughnut`, `Whale`).
+  * **Chat Trigger:** Mencocokkan kata kunci komentar (contoh: `!maju`, `!lompat`).
+  * **Like Milestone:** Menjalankan aksi setiap akumulasi kelipatan $X$ like (contoh: tiap 10 like).
+* **FR-2.2: Aksi Keyboard:**
+  * Mendukung tombol `W`, `A`, `S`, `D`, `Space`, `Shift`, `E`, `R`, dll.
+  * Mode: *Hold* (tahan durasi detik) atau *Tap* (ketukan instan).
+  * Opsi *Multiplier/Combo*: Melipatgandakan durasi hold atau perulangan tap sesuai combo gift.
+  * Opsi *Cooldown*: Mencegah tombol dipicu berulang kali dalam jeda waktu tertentu.
 
-#### 5.3 Modul Eksekusi Input (Action Executor & Queue System)
-* **FR-3.1:** Sistem wajib menggunakan *DirectInput Scancode* agar kompatibel dengan engine game DirectX (Roblox Client).
-* **FR-3.2: Queue Buffer:** Semua event yang masuk dimasukkan ke dalam antrean FIFO (*First-In, First-Out*).
-* **FR-3.3: Spam Throttling:** Membatasi jumlah antrean maksimal (misal: maksimal 50 aksi tersimpan) untuk menghindari *gameplay lag* saat menerima spam gift berturut-turut.
-* **FR-3.4: Emergency Stop:** Menyediakan hotkey darurat (misal: `Ctrl + Shift + Q`) untuk membatalkan semua antrean dan melepas semua tombol yang sedang ditekan.
+#### 5.3 Modul Eksekusi DirectInput & Window Focus (FR-3)
+* **FR-3.1:** Menggunakan hardware scancode asli via `SendInput` / `pydirectinput` agar dikenali mesin DirectX Roblox.
+* **FR-3.2: Window Focus Guard:** Kemampuan mendeteksi dan secara otomatis memfokuskan jendela Roblox sebelum tombol dieksekusi (`auto_focus_roblox`), sehingga input tidak nyasar saat streamer membuka OBS/browser.
+* **FR-3.3: Emergency Stop:** Hotkey OS global **`Ctrl + Shift + Q`** serta tombol merah di dashboard untuk mengosongkan antrean seketika dan melepas semua tombol yang tertahan.
 
-#### 5.4 Antarmuka Pengguna Lokal (Local Web Dashboard)
-* **FR-4.1:** Panel kontrol responsif berbasis browser lokal (`http://localhost:8000`).
-* **FR-4.2:** Form CRUD (*Create, Read, Update, Delete*) untuk daftar aturan pemetaan.
-* **FR-4.3: Live Log Terminal:** Menampilkan log aktivitas masuk secara *real-time* (Pengirim, Gift, Aksi Tombol yang dipicu).
-* **FR-4.4: Fitur Test Key:** Tombol untuk menguji apakah simulasi penekanan tombol berfungsi ke game tanpa perlu menunggu live gift sungguhan.
+#### 5.4 Modul Local Web Dashboard (FR-4)
+* **FR-4.1:** Dashboard responsif di `http://localhost:8000` dengan tema modern dark mode.
+* **FR-4.2:** CRUD rules interaktif dengan penyimpanan otomatis ke `rules.json`.
+* **FR-4.3:** Live terminal log aktivitas interaksi via WebSocket.
+* **FR-4.4:** Grid tombol uji coba input DirectInput (*Test Key*) langsung ke game.
+* **FR-4.5:** Tombol salin URL OBS sekali klik (*One-Click Copy URL*).
 
----
+#### 5.5 Modul OBS Interactive Overlay Karakter & Balon (`/overlay`) (FR-5)
+* **FR-5.1: Karakter Berjalan Penonton (Join Event):**
+  * Setiap penonton yang bergabung memunculkan avatar SVG unik yang berjalan bolak-balik di dasar layar.
+  * **Ukuran Tetap (*Fixed Size*):** Karakter mempertahankan skala ukuran tetap (68px) dan tidak mengecil/hilang saat jendela OBS di-resize.
+  * **Anti-Mirrored Text:** Saat karakter mencapai tepi layar dan berbalik arah (kiri $\leftrightarrow$ kanan), **hanya badan sprite karakter yang dibalik**, sedangkan teks nama (*nametag*) dan balon obrolan (*speech bubble*) **tetap normal (LTR) dan tidak terbalik**.
+  * Viewport clamping dinamis menjaga karakter tidak keluar dari batas layar.
+* **FR-5.2: Balon Hadiah Gift (Gift Event):**
+  * Memunculkan balon udara melayang warna-warni bertuliskan nama gift dan multiplier combo (contoh: `Rose x5`).
+* **FR-5.3: Partikel Hati Tap-Tap (Like Event):**
+  * Memunculkan partikel hati melayang acak saat penonton tap layar.
+* **FR-5.4: Balon Chat Karakter (Comment Event):**
+  * Jika penonton yang karakternya sedang ada di layar mengirim komentar, muncul balon obrolan di atas kepalanya.
 
-### 6. Kebutuhan Non-Fungsional (Non-Functional Requirements)
-* **NFR-1 (Latensi):** Keterlambatan antara penangkapan event WebSocket hingga simulasi tombol ditekan harus $\le 250\text{ ms}$.
-* **NFR-2 (Stabilitas & Resource):** Penggunaan CPU di bawah $5\%$ dan RAM di bawah $200\text{ MB}$ saat idle maupun aktif memproses event.
-* **NFR-3 (Privilege / Keamanan):** Aplikasi harus memberikan peringatan jika tidak dijalankan dengan izin administratif (*Run as Administrator*), karena OS membatasi emulasi DirectInput jika level privilege tidak memadai.
-* **NFR-4 (Ketahanan Anti-Cheat):** Input dikirim sebagai simulasi sinyal keyboard OS standar, bukan injeksi memori proses Roblox, untuk mencegah deteksi pemblokiran akun.
+#### 5.6 Modul Pembaca Komentar Suara Robot / TTS (FR-6)
+* **FR-6.1:** Membacakan komentar penonton secara otomatis menggunakan Web Speech API Bahasa Indonesia (`id-ID`).
+* **FR-6.2:** Pengaturan kustomisasi di dashboard:
+  * Saklar On/Off TTS.
+  * Format template kalimat (default: `{nickname} berkata: {comment}`).
+  * Pengaturan volume suara (0% - 100%).
+  * Pengaturan kecepatan bicara (0.8x - 1.4x).
+* **FR-6.3:** Tombol uji coba simulasi suara TTS di Web Dashboard.
 
----
-
-### 7. Skema Data (Data Model Specification)
-
-#### 7.1 Action Rule (`rules.json`)
-```json
-{
-  "rules": [
-    {
-      "id": "rule_001",
-      "trigger_type": "gift",
-      "gift_name": "Rose",
-      "target_key": "w",
-      "press_mode": "hold",
-      "duration_seconds": 0.4,
-      "multiplier_enabled": true,
-      "cooldown_seconds": 0.1
-    },
-    {
-      "id": "rule_002",
-      "trigger_type": "gift",
-      "gift_name": "Doughnut",
-      "target_key": "space",
-      "press_mode": "tap",
-      "duration_seconds": 0.1,
-      "multiplier_enabled": false,
-      "cooldown_seconds": 0.5
-    }
-  ]
-}
-```
+#### 5.7 Modul OBS Dedicated Live Comment List (`/comments` & `/chat`) (FR-7)
+* **FR-7.1: Format Tampilan Wajib:**
+  * Komentar ditampilkan dalam format baris vertikal: **`[Nama User] : [Komentarnya]`**.
+* **FR-7.2: Desain OBS Transparan:**
+  * Background 100% transparan, kartu pesan bergaya glassmorphism semi-transparan dengan drop shadow tebal agar terbaca di atas gameplay apapun.
+* **FR-7.3: Avatar & Palet Warna Unik:**
+  * Setiap user memiliki lingkaran inisial / foto profil dengan warna cerah unik berdasarkan hash nama.
+* **FR-7.4: Arah Teks:**
+  * Menggunakan CSS `direction: ltr !important` dan `unicode-bidi: normal !important` untuk menjamin teks tidak akan terbalik.
+* **FR-7.5: Animasi & Manajemen Antrean:**
+  * Efek animasi masuk *slide-in up* halus.
+  * Membatasi maksimal 20 komentar terbaru di layar untuk menjaga performa rendering OBS.
+* **FR-7.6: Kompatibilitas OBS Browser Source:**
+  * Mengirimkan header HTTP `Cache-Control: no-cache, no-store, must-revalidate` agar browser CEF OBS selalu memuat versi terkini.
+  * Menyertakan pesan tes status awal sehingga tampilan OBS tidak blank saat baru ditambahkan.
 
 ---
 
-### 8. Rencana Rilis & Tahapan Pengembangan (Milestones)
-
-| Fase | Target Deliverables | Durasi Estimasi |
-| :--- | :--- | :--- |
-| **Fase 1: Core Engine** | Modul DirectInput Scancode, Queue FIFO dengan Throttling, integrasi WebSocket TikTokLive | 1 Minggu |
-| **Fase 2: REST API & Rule Engine** | Engine pencocokan trigger, CRUD rules, penyimpanan format JSON | 1 Minggu |
-| **Fase 3: Local Web Dashboard** | UI responsif (HTML/Tailwind), live event log via WebSocket, tombol Test Key | 1 Minggu |
-| **Fase 4: Packaging & Testing** | Emergency Stop hotkey, deteksi window Roblox, testing stabilitas & packaging .exe | 1 Minggu |
+### 6. Kebutuhan Non-Fungsional (NFR)
+* **NFR-1 (Latensi Eksekusi):** Waktu respon dari WebSocket TikTok hingga tombol game ditekan dan animasi overlay muncul $\le 200\text{ ms}$.
+* **NFR-2 (Konsumsi Resource):** Penggunaan RAM $\le 180\text{ MB}$ dan CPU $\le 4\%$ pada PC spesifikasi standar streamer (Core i3 / Ryzen 3, 8GB RAM).
+* **NFR-3 (Keandalan Jaringan Lokal):** Bind server ke `0.0.0.0:8000` sehingga dapat diakses via `localhost`, `127.0.0.1`, maupun IP lokal LAN.
+* **NFR-4 (Anti-Cheat & Keamanan):** Menggunakan emulasi input keyboard OS murni (`SendInput`), bukan injeksi DLL atau modifikasi file game Roblox.
 
 ---
 
-### 9. Risiko & Mitigasi
+### 7. Matriks Ketercapaian Fitur (Feature Completion Matrix)
 
-| Risiko | Dampak | Strategi Mitigasi |
-| :--- | :--- | :--- |
-| **Perubahan Protokol TikTok** | Event stream gagal membaca gift (breaking change library). | Buat arsitektur modular agar modul listener dapat diperbarui atau dialihkan konektornya tanpa merombak executor. |
-| **Roblox Kehilangan Fokus Jendela** | Tombol tertekan di aplikasi lain (misal: mengetik di browser/OBS). | Tambahkan validasi jendela aktif atau fokus otomatis ke jendela `Roblox` sebelum input dikirim. |
-| **Banjir Gift (Massive Spam)** | Karakter bergerak tanpa henti selama bermenit-menit. | Implementasikan cap limit antrean (max 50 aksi) dan pembatasan durasi per combo. |
+Berikut adalah status implementasi seluruh kebutuhan PRD per **2 November 2026**:
+
+| Kode | Modul / Kebutuhan | Target Awal | Status Saat Ini | Keterangan |
+| :--- | :--- | :--- | :---: | :--- |
+| **FR-1.1** | Input Username TikTok | MVP | ✅ **SELESAI** | Terhubung via `TikTokLiveClient`. |
+| **FR-1.2** | Status Koneksi Real-time | MVP | ✅ **SELESAI** | Indikator live badge & Room ID di UI. |
+| **FR-1.3** | Tombol Disconnect | MVP | ✅ **SELESAI** | Disconnect endpoint berfungsi bersih. |
+| **FR-1.4** | Deteksi Stream LIVE vs OFFLINE Eksplisit | MVP | ⏳ **BELUM LENGKAP** | Error ditangani via exception, belum ada banner status "Streamer Sedang Offline" dengan timer retry. |
+| **FR-2.1** | Pemetaan Gift, Chat, Like Triggers | MVP | ✅ **SELESAI** | Rule engine mendukung ketiganya. |
+| **FR-2.2** | Konfigurasi Tombol, Hold, Tap, Multiplier | MVP | ✅ **SELESAI** | Tersimpan di `rules.json`. |
+| **FR-2.3** | Cooldown per Rule | MVP | ✅ **SELESAI** | Throttle timer per `rule.id` aktif. |
+| **FR-3.1** | Hardware DirectInput Scancode | MVP | ✅ **SELESAI** | Scancode DirectX/Win32 kompatibel Roblox. |
+| **FR-3.2** | FIFO Queue Buffer & Throttling | MVP | ✅ **SELESAI** | Max queue size 50 aksi dengan auto-drop. |
+| **FR-3.3** | Auto-Focus Window Roblox | v1.5 | ✅ **SELESAI** | Menghidupkan fokus otomatis jendela Roblox sebelum tombol ditekan. |
+| **FR-3.4** | Emergency Stop Hotkey (`Ctrl+Shift+Q`) | MVP | ✅ **SELESAI** | Background thread Win32 `GetAsyncKeyState`. |
+| **FR-4.1** | Web Dashboard Lokal | MVP | ✅ **SELESAI** | Tailwind CSS dark mode di `:8000`. |
+| **FR-4.2** | Live Log Terminal WebSocket | MVP | ✅ **SELESAI** | Terminal log real-time dengan filter level. |
+| **FR-4.3** | DirectInput Key Tester Grid | MVP | ✅ **SELESAI** | Uji tombol W, A, S, D, Space, dll. |
+| **FR-5.1** | Karakter Berjalan Penonton (`/overlay`) | v2.0 | ✅ **SELESAI** | Bouncing SVG, arah bolak-balik. |
+| **FR-5.2** | Anti-Mirrored Text pada Karakter | v2.0 | ✅ **SELESAI** | Balik arah hanya membalik sprite, teks nama/chat tetap normal LTR. |
+| **FR-5.3** | Fixed Size Avatar saat Resize Browser | v2.0 | ✅ **SELESAI** | Viewport clamping dinamis dan fixed body. |
+| **FR-5.4** | Balon Gift Melayang (`/overlay`) | v2.0 | ✅ **SELESAI** | Balon animasi dengan info combo. |
+| **FR-5.5** | Partikel Love Tap-Tap (`/overlay`) | v2.0 | ✅ **SELESAI** | Hati melayang saat penonton like. |
+| **FR-6.1** | Text-To-Speech (TTS) Suara Robot | v2.0 | ✅ **SELESAI** | Web Speech API suara Bahasa Indonesia. |
+| **FR-6.2** | Kontrol Volume, Speed, Template TTS | v2.0 | ✅ **SELESAI** | Terkonfigurasi via Web Dashboard. |
+| **FR-7.1** | Dedicated OBS Comment List (`/comments`) | v2.0 | ✅ **SELESAI** | Halaman khusus list komentar vertikal. |
+| **FR-7.2** | Format `Nama User : Komentarnya` | v2.0 | ✅ **SELESAI** | Teks terformat rapi dengan avatar badge. |
+| **FR-7.3** | Anti-Mirrored LTR Text di OBS Comments | v2.0 | ✅ **SELESAI** | CSS `direction: ltr !important`. |
+| **FR-7.4** | Anti-Cache Headers OBS Chromium CEF | v2.0 | ✅ **SELESAI** | `Cache-Control: no-cache, no-store`. |
+| **Fase 4** | Standalone Executable (.exe Packaging) | Roadmap | ⏳ **BELUM SELESAI** | Masih berjalan via `run.bat` dan virtual environment `.venv`. |
+| **Audio** | Sound Effects (SFX) Kustom untuk Gift | Roadmap | ⏳ **BELUM SELESAI** | Belum ada pemutar file audio MP3/WAV lokal saat gift tertentu masuk. |
+| **Mod** | Filter Kata Kasar (Bad Words Filter) TTS | Roadmap | ⏳ **BELUM SELESAI** | Belum ada sensor kata kotor sebelum dibacakan robot TTS atau ditampilkan di chat. |
+| **Profil** | Multi-Profile Preset Manager (Obby, Driving) | Roadmap | ⏳ **BELUM SELESAI** | Baru mendukung 1 profil aktif (`rules.json`). |
+| **Skin** | Custom Avatar Skin Upload | Roadmap | ⏳ **BELUM SELESAI** | Masih menggunakan generator karakter procedural SVG. |
+
+---
+
+### 8. Analisis Item yang Belum Selesai (Pending Backlog & Roadmap)
+
+Berdasarkan audit kebutuhan produk dan pengembangan lanjutan, berikut adalah rincian **6 item yang belum selesai** beserta rekomendasi rencana eksekusinya:
+
+#### 1. Standalone Executable Packaging (`.exe` Tanpa Python Manual)
+* **Masalah Saat Ini:** Pengguna masih harus menjalankan aplikasi melalui file `run.bat` yang membutuhkan folder `.venv` Python di komputer lokal.
+* **Kebutuhan:** Mengompilasi aplikasi menjadi satu file `.exe` portabel menggunakan **PyInstaller** atau installer setup (Inno Setup) agar pengguna awam cukup klik dua kali file aplikasi tanpa instalasi Python.
+* **Tingkat Kesulitan:** Sedang.
+
+#### 2. Deteksi Status Siaran LIVE vs OFFLINE yang Lebih Informatif di Web UI
+* **Masalah Saat Ini:** Jika streamer TikTok belum mulai live atau salah ketik username, sistem menampilkan status disconnect di log, namun kartu status utama belum menampilkan peringatan jelas seperti *"Streamer Sedang Offline / Room Tidak Ditemukan"*.
+* **Kebutuhan:** Menambahkan parser error spesifik dari `TikTokLiveClient` dan menampilkan modal/banner ramah pengguna dengan tombol *"Coba Sambungkan Lagi"* atau countdown auto-retry.
+* **Tingkat Kesulitan:** Rendah.
+
+#### 3. Sound Effects (SFX) Audio Kustom untuk Event Gift
+* **Masalah Saat Ini:** Saat ada penonton mengirim gift, animasi balon muncul di layar overlay, tetapi belum ada efek suara audio khas (seperti bunyi "Ching!", terompet, atau sound meme).
+* **Kebutuhan:** Menambahkan modul pemutar suara HTML5 Audio pada `overlay.html` dan direktori folder `app/static/sounds/` tempat streamer bisa memilih atau mengunggah suara SFX kustom untuk setiap jenis gift.
+* **Tingkat Kesulitan:** Rendah.
+
+#### 4. Filter Kata Kasar (Profanity / Toxic Words Filter) untuk TTS & Chat List
+* **Masalah Saat Ini:** Semua komentar dibacakan apa adanya oleh robot TTS dan ditampilkan di kotak komentar. Jika ada penonton yang mengirim kata-kata tidak pantas atau spam SARA, robot TTS akan tetap membacakannya di live stream.
+* **Kebutuhan:** Menambahkan modul blacklist kata-kata kotor lokal di backend (`app/moderation.py`) yang mengganti kata kasar menjadi sensor `***` atau menolak membacakannya via TTS.
+* **Tingkat Kesulitan:** Rendah - Sedang.
+
+#### 5. Multi-Profile Preset Rules Manager (Preset Game Berbeda)
+* **Masalah Saat Ini:** Konfigurasi aksi keyboard disimpan hanya di satu file `rules.json`. Jika streamer ingin berganti dari game Obby (tombol W, Space) ke game Mobil/Balapan (tombol W, A, S, D, Shift), streamer harus mengubah atau membuat ulang aturan satu per satu.
+* **Kebutuhan:** Menyediakan dropdown profil di Web Dashboard (contoh: *"Profil Obby Roblox"*, *"Profil Driving Roblox"*, *"Profil Minecraft"*) dengan tombol *Simpan Profil Baru*, *Ekspor JSON*, dan *Impor JSON*.
+* **Tingkat Kesulitan:** Rendah - Sedang.
+
+#### 6. Custom Avatar Skin / Sprite Selector untuk Karakter Penonton
+* **Masalah Saat Ini:** Karakter penonton yang join saat ini di-generate secara acak dari template procedural SVG bawaan kode.
+* **Kebutuhan:** Memberi opsi bagi streamer untuk memilih gaya karakter penonton (misal: Style Karakter Blok Roblox, Style Pixel Art 8-bit, atau Style Chibi) atau mengunggah avatar PNG kustom.
+* **Tingkat Kesulitan:** Sedang.
+
+---
+
+### 9. Rencana Prioritas Tindakan Selanjutnya (Action Plan)
+
+1. **Sprint Berikutnya (Quick Wins & Polish):**
+   * Tambahkan **Profanity / Bad Words Filter** sederhana untuk melindungi siaran dari kata-kata kasar di TTS.
+   * Tambahkan **Sound Effects (SFX) kustom** untuk gift di overlay.
+   * Perjelas notifikasi status **LIVE vs OFFLINE** di Web Dashboard.
+2. **Sprint Lanjutan (Packaging & Distribution):**
+   * Buat script build PyInstaller untuk menghasilkan `RizTik.exe`.
+   * Implementasikan fitur **Multi-Profile Preset** (Save/Load Profile JSON) di Web Dashboard.
