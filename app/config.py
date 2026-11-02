@@ -42,6 +42,7 @@ class AppConfig(BaseModel):
     require_roblox_focus: bool = False
     auto_focus_roblox: bool = True
     max_queue_size: int = 50
+    active_profile: str = "roblox_obby"
     # Overlay & TTS Features
     tts_enabled: bool = True
     tts_volume: float = 1.0

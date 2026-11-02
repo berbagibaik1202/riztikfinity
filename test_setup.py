@@ -52,10 +52,43 @@ def test_static_and_routes():
     assert "/overlay" in routes, "Missing /overlay route"
     assert "/comments" in routes, "Missing /comments route"
     assert "/chat" in routes, "Missing /chat route"
+    assert "/api/profiles" in routes, "Missing /api/profiles route"
+    assert "/api/profiles/select" in routes, "Missing /api/profiles/select route"
+
+def test_profiles():
+    print("\nTesting profile_manager...")
+    from app.profile_manager import profile_mgr
+    profile_mgr.ensure_profiles_dir()
+    profs = profile_mgr.list_profiles()
+    assert len(profs) >= 4, f"Expected at least 4 presets, got {len(profs)}"
+    print(f"  [OK] Found {len(profs)} profiles:")
+    for p in profs:
+        print(f"    - {p['id']}: {p['name']} ({p['rules_count']} rules)")
+    
+    # Test loading roblox_driving
+    driving = profile_mgr.get_profile("roblox_driving")
+    assert driving is not None, "Failed to load roblox_driving"
+    assert len(driving.rules) > 0, "roblox_driving has no rules"
+    print(f"  [OK] Successfully loaded {driving.name} with {len(driving.rules)} rules.")
+
+    # Test duplicate and delete guard
+    clone = profile_mgr.duplicate_profile("roblox_driving", "test_temp_clone", "Temp Test Clone")
+    assert clone is not None, "Failed to duplicate profile"
+    assert clone.id == "test_temp_clone"
+
+    # Active profile delete guard
+    can_del_active, _ = profile_mgr.delete_profile("test_temp_clone", active_profile_id="test_temp_clone")
+    assert can_del_active is False, "Active profile must not be deleted"
+
+    # Delete non-active clone
+    can_del, _ = profile_mgr.delete_profile("test_temp_clone", active_profile_id="roblox_obby")
+    assert can_del is True, "Failed to delete non-active profile"
+    print("  [OK] Duplication and safety delete guards verified successfully.")
 
 if __name__ == "__main__":
     test_direct_input()
     test_config()
     test_static_and_routes()
+    test_profiles()
     print("\nAll core tests passed successfully!")
 

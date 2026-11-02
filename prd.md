@@ -161,6 +161,23 @@ Aplikasi **RizTik (TikTok Live Game Controller & Interactive OBS Streaming Suite
   * Mengirimkan header HTTP `Cache-Control: no-cache, no-store, must-revalidate` agar browser CEF OBS selalu memuat versi terkini.
   * Menyertakan pesan tes status awal sehingga tampilan OBS tidak blank saat baru ditambahkan.
 
+#### 5.8 Modul Multi-Profile Preset Game (FR-8)
+* **FR-8.1: Preset Bawaan Siap Pakai (*Built-in Presets*):**
+  * **Roblox Obby (Parkour):** Mawar maju, Donat lompat, Paus mundur/jatuh, chat `!lompat` & `!maju`.
+  * **Roblox Driving (Balapan Mobil):** Mawar gas, Donat rem tangan (space), Ice Cream rem mundur, Finger Heart klakson, chat `!kiri` & `!kanan`.
+  * **Minecraft Survival & Adventure:** Mawar maju, Donat lompat, Ice Cream jongkok (shift), Paus drop item (Q), chat `!tas` (E).
+  * **Roblox Tower of Hell (Hardcore):** Mawar lompat terus, Donat lari maju, Paus mundur jatuh.
+* **FR-8.2: Pengalihan Profil Instan (*Instant Switch*):**
+  * Streamer dapat beralih profil game lewat dropdown di Web Dashboard tanpa perlu me-restart server.
+  * Aturan langsung tersinkronisasi ke Action Queue dan tersimpan di `rules.json`.
+* **FR-8.3: Manajemen Profil Kustom (CRUD):**
+  * Membuat profil baru (*+ Profil Baru*) dengan opsi salin aturan aktif atau daftar kosong.
+  * Menduplikasi profil (*Duplicate*) untuk modifikasi variasi game.
+  * Menghapus profil kustom (dengan proteksi profil aktif & preset bawaan).
+* **FR-8.4: Portabilitas Profil (Ekspor & Impor JSON):**
+  * Mengunduh profil aktif menjadi file `.json`.
+  * Mengunggah file `.json` untuk mengimpor profil buatan streamer lain.
+
 ---
 
 ### 6. Kebutuhan Non-Fungsional (NFR)
@@ -202,17 +219,18 @@ Berikut adalah status implementasi seluruh kebutuhan PRD per **2 November 2026**
 | **FR-7.2** | Format `Nama User : Komentarnya` | v2.0 | ✅ **SELESAI** | Teks terformat rapi dengan avatar badge. |
 | **FR-7.3** | Anti-Mirrored LTR Text di OBS Comments | v2.0 | ✅ **SELESAI** | CSS `direction: ltr !important`. |
 | **FR-7.4** | Anti-Cache Headers OBS Chromium CEF | v2.0 | ✅ **SELESAI** | `Cache-Control: no-cache, no-store`. |
+| **FR-8.1** | Multi-Profile Preset Manager (Obby, Driving, Minecraft) | v2.1 | ✅ **SELESAI** | Pengalihan profil instan, 4 built-in preset, ekspor/impor JSON, sinkronisasi otomatis. |
 | **Fase 4** | Standalone Executable (.exe Packaging) | Roadmap | ⏳ **BELUM SELESAI** | Masih berjalan via `run.bat` dan virtual environment `.venv`. |
 | **Audio** | Sound Effects (SFX) Kustom untuk Gift | Roadmap | ⏳ **BELUM SELESAI** | Belum ada pemutar file audio MP3/WAV lokal saat gift tertentu masuk. |
 | **Mod** | Filter Kata Kasar (Bad Words Filter) TTS | Roadmap | ⏳ **BELUM SELESAI** | Belum ada sensor kata kotor sebelum dibacakan robot TTS atau ditampilkan di chat. |
-| **Profil** | Multi-Profile Preset Manager (Obby, Driving) | Roadmap | ⏳ **BELUM SELESAI** | Baru mendukung 1 profil aktif (`rules.json`). |
+| **UI** | Deteksi Status Siaran LIVE vs OFFLINE Eksplisit | Roadmap | ⏳ **BELUM SELESAI** | Belum ada banner status "Streamer Sedang Offline" dengan timer retry di Web UI. |
 | **Skin** | Custom Avatar Skin Upload | Roadmap | ⏳ **BELUM SELESAI** | Masih menggunakan generator karakter procedural SVG. |
 
 ---
 
 ### 8. Analisis Item yang Belum Selesai (Pending Backlog & Roadmap)
 
-Berdasarkan audit kebutuhan produk dan pengembangan lanjutan, berikut adalah rincian **6 item yang belum selesai** beserta rekomendasi rencana eksekusinya:
+Berdasarkan audit kebutuhan produk dan pengembangan lanjutan, berikut adalah rincian **5 item yang masih belum selesai** beserta rekomendasi rencana eksekusinya:
 
 #### 1. Standalone Executable Packaging (`.exe` Tanpa Python Manual)
 * **Masalah Saat Ini:** Pengguna masih harus menjalankan aplikasi melalui file `run.bat` yang membutuhkan folder `.venv` Python di komputer lokal.
@@ -234,12 +252,7 @@ Berdasarkan audit kebutuhan produk dan pengembangan lanjutan, berikut adalah rin
 * **Kebutuhan:** Menambahkan modul blacklist kata-kata kotor lokal di backend (`app/moderation.py`) yang mengganti kata kasar menjadi sensor `***` atau menolak membacakannya via TTS.
 * **Tingkat Kesulitan:** Rendah - Sedang.
 
-#### 5. Multi-Profile Preset Rules Manager (Preset Game Berbeda)
-* **Masalah Saat Ini:** Konfigurasi aksi keyboard disimpan hanya di satu file `rules.json`. Jika streamer ingin berganti dari game Obby (tombol W, Space) ke game Mobil/Balapan (tombol W, A, S, D, Shift), streamer harus mengubah atau membuat ulang aturan satu per satu.
-* **Kebutuhan:** Menyediakan dropdown profil di Web Dashboard (contoh: *"Profil Obby Roblox"*, *"Profil Driving Roblox"*, *"Profil Minecraft"*) dengan tombol *Simpan Profil Baru*, *Ekspor JSON*, dan *Impor JSON*.
-* **Tingkat Kesulitan:** Rendah - Sedang.
-
-#### 6. Custom Avatar Skin / Sprite Selector untuk Karakter Penonton
+#### 5. Custom Avatar Skin / Sprite Selector untuk Karakter Penonton
 * **Masalah Saat Ini:** Karakter penonton yang join saat ini di-generate secara acak dari template procedural SVG bawaan kode.
 * **Kebutuhan:** Memberi opsi bagi streamer untuk memilih gaya karakter penonton (misal: Style Karakter Blok Roblox, Style Pixel Art 8-bit, atau Style Chibi) atau mengunggah avatar PNG kustom.
 * **Tingkat Kesulitan:** Sedang.
@@ -251,6 +264,9 @@ Berdasarkan audit kebutuhan produk dan pengembangan lanjutan, berikut adalah rin
 1. **Sprint Berikutnya (Quick Wins & Polish):**
    * Tambahkan **Profanity / Bad Words Filter** sederhana untuk melindungi siaran dari kata-kata kasar di TTS.
    * Tambahkan **Sound Effects (SFX) kustom** untuk gift di overlay.
+   * Perjelas notifikasi status **LIVE vs OFFLINE** di Web Dashboard.
+2. **Sprint Lanjutan (Packaging & Distribution):**
+   * Buat script build PyInstaller untuk menghasilkan `RizTik.exe`.
    * Perjelas notifikasi status **LIVE vs OFFLINE** di Web Dashboard.
 2. **Sprint Lanjutan (Packaging & Distribution):**
    * Buat script build PyInstaller untuk menghasilkan `RizTik.exe`.

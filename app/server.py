@@ -6,13 +6,14 @@ import asyncio
 from contextlib import asynccontextmanager
 import os
 from typing import List, Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app import direct_input
 from app.config import ActionRule, AppConfig, load_config, save_config
+from app.profile_manager import GameProfile, profile_mgr
 from app.queue_manager import QueueManager
 from app.tiktok_client import ConnectionState, TikTokManager
 
@@ -68,7 +69,9 @@ tiktok_mgr.add_overlay_listener(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: start queue processor
+    # Startup: ensure profiles directory & seed presets
+    profile_mgr.ensure_profiles_dir()
+    # start queue processor
     await queue_mgr.start()
     yield
     # Shutdown
@@ -112,6 +115,26 @@ class TestOverlayEventRequest(BaseModel):
     text: Optional[str] = "Halo bang! Semangat terus live-nya!"
     gift_name: Optional[str] = "Rose"
     combo: int = 1
+
+
+class SelectProfileRequest(BaseModel):
+    profile_id: str
+
+
+class SaveCurrentProfileRequest(BaseModel):
+    name: str
+    game_name: str = "Roblox"
+    description: str = ""
+
+
+class DuplicateProfileRequest(BaseModel):
+    source_id: str
+    new_id: str
+    new_name: str
+
+
+class ImportProfileRequest(BaseModel):
+    data: dict
 
 
 @app.get("/")
@@ -189,6 +212,7 @@ async def get_rules():
         "require_roblox_focus": queue_mgr.require_roblox_focus,
         "auto_focus_roblox": queue_mgr.auto_focus_roblox,
         "max_queue_size": queue_mgr.max_queue_size,
+        "active_profile": getattr(config, "active_profile", "roblox_obby"),
         "rules": config.rules,
     }
 
@@ -205,8 +229,133 @@ async def save_rules(req: ConfigUpdateRequest):
     queue_mgr.max_queue_size = req.max_queue_size
 
     save_config(config)
-    await queue_mgr.broadcast_log("INFO", f"Berhasil menyimpan {len(req.rules)} aturan.")
-    return {"success": True, "rules_count": len(req.rules)}
+
+    # Also sync changes to active profile file if it exists
+    if getattr(config, "active_profile", None):
+        prof = profile_mgr.get_profile(config.active_profile)
+        if prof:
+            prof.rules = req.rules
+            profile_mgr.save_profile(prof)
+
+    await queue_mgr.broadcast_log(
+        "INFO",
+        f"Berhasil menyimpan {len(req.rules)} aturan untuk profil '{config.active_profile}'.",
+    )
+    return {"success": True, "rules_count": len(req.rules), "active_profile": config.active_profile}
+
+
+# ======================================================================
+# MULTI-PROFILE PRESET GAME ENDPOINTS
+# ======================================================================
+
+@app.get("/api/profiles")
+async def get_profiles():
+    """List all available game rule presets."""
+    active_id = getattr(config, "active_profile", "roblox_obby")
+    return {
+        "active_profile": active_id,
+        "profiles": profile_mgr.list_profiles(active_id),
+    }
+
+
+@app.post("/api/profiles/select")
+async def select_profile(req: SelectProfileRequest):
+    """Switch active game profile and load its rules."""
+    prof = profile_mgr.get_profile(req.profile_id)
+    if not prof:
+        raise HTTPException(status_code=404, detail="Profil tidak ditemukan")
+
+    config.active_profile = prof.id
+    config.rules = prof.rules
+    save_config(config)
+
+    # Broadcast real-time update to web dashboard
+    await broadcast_ws({
+        "type": "profile_changed",
+        "data": {
+            "active_profile": prof.id,
+            "profile_name": prof.name,
+            "game_name": prof.game_name,
+            "rules": [r.model_dump() for r in prof.rules],
+        },
+    })
+
+    await queue_mgr.broadcast_log(
+        "ACTION",
+        f"🎮 Beralih ke profil game: '{prof.name}' ({len(prof.rules)} aturan dimuat).",
+    )
+    return {
+        "success": True,
+        "active_profile": prof.id,
+        "name": prof.name,
+        "rules_count": len(prof.rules),
+        "rules": prof.rules,
+    }
+
+
+@app.post("/api/profiles/save-current")
+async def save_current_profile(req: SaveCurrentProfileRequest):
+    """Save current active rules as a new named custom profile."""
+    from app.profile_manager import sanitize_profile_id
+    prof_id = sanitize_profile_id(req.name)
+    new_profile = GameProfile(
+        id=prof_id,
+        name=req.name.strip(),
+        game_name=req.game_name.strip() or "Roblox",
+        description=req.description.strip(),
+        is_builtin=False,
+        rules=[r.model_copy() for r in config.rules],
+    )
+    if profile_mgr.save_profile(new_profile):
+        config.active_profile = prof_id
+        save_config(config)
+        await queue_mgr.broadcast_log("INFO", f"Profil baru berhasil dibuat: '{new_profile.name}'.")
+        return {"success": True, "profile": new_profile.model_dump()}
+    raise HTTPException(status_code=500, detail="Gagal menyimpan profil baru.")
+
+
+@app.post("/api/profiles/duplicate")
+async def duplicate_profile(req: DuplicateProfileRequest):
+    """Duplicate an existing profile with a new name."""
+    cloned = profile_mgr.duplicate_profile(req.source_id, req.new_id, req.new_name)
+    if not cloned:
+        raise HTTPException(status_code=400, detail="Gagal menduplikasi profil.")
+    await queue_mgr.broadcast_log("INFO", f"Profil '{cloned.name}' berhasil diduplikasi.")
+    return {"success": True, "profile": cloned.model_dump()}
+
+
+@app.delete("/api/profiles/{profile_id}")
+async def delete_profile(profile_id: str):
+    """Delete a profile (cannot delete active profile)."""
+    success, msg = profile_mgr.delete_profile(profile_id, config.active_profile)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+    await queue_mgr.broadcast_log("INFO", msg)
+    return {"success": True, "message": msg}
+
+
+@app.get("/api/profiles/{profile_id}/export")
+async def export_profile(profile_id: str):
+    """Export profile as a downloadable JSON file."""
+    prof = profile_mgr.get_profile(profile_id)
+    if not prof:
+        raise HTTPException(status_code=404, detail="Profil tidak ditemukan")
+    return JSONResponse(
+        content=prof.model_dump(),
+        headers={
+            "Content-Disposition": f'attachment; filename="riztik_profile_{prof.id}.json"'
+        },
+    )
+
+
+@app.post("/api/profiles/import")
+async def import_profile(req: ImportProfileRequest):
+    """Import a profile from JSON payload."""
+    prof, msg = profile_mgr.import_profile(req.data)
+    if not prof:
+        raise HTTPException(status_code=400, detail=msg)
+    await queue_mgr.broadcast_log("INFO", f"Berhasil mengimpor profil: '{prof.name}'.")
+    return {"success": True, "profile": prof.model_dump(), "message": msg}
 
 
 @app.get("/api/overlay/settings")

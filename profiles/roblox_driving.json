@@ -1,0 +1,113 @@
+{
+  "id": "roblox_driving",
+  "name": "Roblox Driving (Balapan Mobil)",
+  "description": "Kendali mobil balap: W gas maju, S rem/mundur, Space rem tangan, H klakson.",
+  "game_name": "Roblox Driving",
+  "is_builtin": true,
+  "rules": [
+    {
+      "id": "drive_rose_gas",
+      "trigger_type": "gift",
+      "gift_name": "Rose",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 0.8,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": true
+    },
+    {
+      "id": "drive_doughnut_handbrake",
+      "trigger_type": "gift",
+      "gift_name": "Doughnut",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "space",
+      "press_mode": "hold",
+      "duration_seconds": 0.6,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "drive_icecream_reverse",
+      "trigger_type": "gift",
+      "gift_name": "Ice Cream",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "s",
+      "press_mode": "hold",
+      "duration_seconds": 0.8,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.3,
+      "enabled": true
+    },
+    {
+      "id": "drive_heart_horn",
+      "trigger_type": "gift",
+      "gift_name": "Finger Heart",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "h",
+      "press_mode": "tap",
+      "duration_seconds": 0.2,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.2,
+      "enabled": true
+    },
+    {
+      "id": "drive_chat_left",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!kiri",
+      "like_count": null,
+      "target_key": "a",
+      "press_mode": "hold",
+      "duration_seconds": 0.6,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.2,
+      "enabled": true
+    },
+    {
+      "id": "drive_chat_right",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!kanan",
+      "like_count": null,
+      "target_key": "d",
+      "press_mode": "hold",
+      "duration_seconds": 0.6,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.2,
+      "enabled": true
+    },
+    {
+      "id": "drive_chat_gas",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!gas",
+      "like_count": null,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 1.2,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "drive_like_gas",
+      "trigger_type": "like",
+      "gift_name": null,
+      "chat_command": null,
+      "like_count": 15,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 0.4,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": true
+    }
+  ]
+}

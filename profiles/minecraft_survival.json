@@ -1,0 +1,100 @@
+{
+  "id": "minecraft_survival",
+  "name": "Minecraft Survival & Adventure",
+  "description": "Tantangan Minecraft: Mawar maju, Donat lompat, Shift sneak, E inventory, Q buang barang.",
+  "game_name": "Minecraft",
+  "is_builtin": true,
+  "rules": [
+    {
+      "id": "mc_rose_forward",
+      "trigger_type": "gift",
+      "gift_name": "Rose",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 0.5,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": true
+    },
+    {
+      "id": "mc_doughnut_jump",
+      "trigger_type": "gift",
+      "gift_name": "Doughnut",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "space",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.3,
+      "enabled": true
+    },
+    {
+      "id": "mc_icecream_sneak",
+      "trigger_type": "gift",
+      "gift_name": "Ice Cream",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "shift",
+      "press_mode": "hold",
+      "duration_seconds": 1.0,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "mc_whale_drop",
+      "trigger_type": "gift",
+      "gift_name": "Whale",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "q",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 1.0,
+      "enabled": true
+    },
+    {
+      "id": "mc_chat_jump",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!lompat",
+      "like_count": null,
+      "target_key": "space",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.3,
+      "enabled": true
+    },
+    {
+      "id": "mc_chat_inv",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!tas",
+      "like_count": null,
+      "target_key": "e",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.5,
+      "enabled": true
+    },
+    {
+      "id": "mc_like_forward",
+      "trigger_type": "like",
+      "gift_name": null,
+      "chat_command": null,
+      "like_count": 10,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 0.4,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": true
+    }
+  ]
+}

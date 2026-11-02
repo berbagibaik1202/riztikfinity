@@ -1,0 +1,87 @@
+{
+  "id": "roblox_tower",
+  "name": "Roblox Tower of Hell (Hardcore)",
+  "description": "Tantangan menara maut kecepatan tinggi: Mawar lompat terus, Donat lari, Paus mundur jatuh.",
+  "game_name": "Roblox Tower",
+  "is_builtin": true,
+  "rules": [
+    {
+      "id": "tower_rose_jump",
+      "trigger_type": "gift",
+      "gift_name": "Rose",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "space",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": true
+    },
+    {
+      "id": "tower_doughnut_sprint",
+      "trigger_type": "gift",
+      "gift_name": "Doughnut",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "w",
+      "press_mode": "hold",
+      "duration_seconds": 0.8,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.2,
+      "enabled": true
+    },
+    {
+      "id": "tower_whale_fall",
+      "trigger_type": "gift",
+      "gift_name": "Whale",
+      "chat_command": null,
+      "like_count": null,
+      "target_key": "s",
+      "press_mode": "hold",
+      "duration_seconds": 1.5,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 1.0,
+      "enabled": true
+    },
+    {
+      "id": "tower_chat_jump",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!lompat",
+      "like_count": null,
+      "target_key": "space",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.3,
+      "enabled": true
+    },
+    {
+      "id": "tower_chat_fall",
+      "trigger_type": "chat",
+      "gift_name": null,
+      "chat_command": "!jatuh",
+      "like_count": null,
+      "target_key": "s",
+      "press_mode": "hold",
+      "duration_seconds": 1.0,
+      "multiplier_enabled": false,
+      "cooldown_seconds": 0.8,
+      "enabled": true
+    },
+    {
+      "id": "tower_like_jump",
+      "trigger_type": "like",
+      "gift_name": null,
+      "chat_command": null,
+      "like_count": 10,
+      "target_key": "space",
+      "press_mode": "tap",
+      "duration_seconds": 0.1,
+      "multiplier_enabled": true,
+      "cooldown_seconds": 0.1,
+      "enabled": true
+    }
+  ]
+}
