@@ -289,6 +289,58 @@ local function createMotorcycleModel(color)
 end
 
 -- =============================================================================
+-- HITUNG POSISI GRID START (ANTI-NYANGKUT & RAPI)
+-- =============================================================================
+local function getStartingGridCFrame(racerIndex)
+    local track = workspace:FindFirstChild("StadiumRaceTrack")
+    local startLinePart = track and track:FindFirstChild("StartFinishLine")
+
+    local startCF
+    if startLinePart then
+        startCF = startLinePart.CFrame
+    elseif #waypoints >= 2 then
+        local w1 = waypoints[1].Position
+        local w2 = waypoints[2].Position
+        local dir = (w2 - w1).Unit
+        startCF = CFrame.lookAt(w1, w1 + dir)
+    else
+        startCF = CFrame.lookAt(Vector3.new(160, 1.25, 0), Vector3.new(160, 1.25, 10))
+    end
+
+    local forwardDir = startCF.LookVector
+    local rightDir = startCF.RightVector
+
+    local row = math.floor(racerIndex / 2)
+    local col = (racerIndex % 2 == 0) and -1 or 1 -- -1 = lajur kiri, +1 = lajur kanan
+
+    local startMargin = 18 -- Jarak baris terdepan di BELAKANG garis start (18 studs agar bebas dari tiang/gerbang)
+    local rowSpacing = 16  -- Jarak antar baris ke belakang
+    local laneSpacing = 5.0 -- Jarak ke samping kiri/kanan dari marka tengah jalan
+
+    local spawnPos = startCF.Position 
+        - (forwardDir * (startMargin + (row * rowSpacing))) 
+        + (rightDir * (col * laneSpacing)) 
+        + Vector3.new(0, 2.5, 0)
+
+    return CFrame.lookAt(spawnPos, spawnPos + forwardDir)
+end
+
+-- Pastikan semua tiang/gerbang start tidak memiliki tabrakan (CanCollide = false) agar mobil tidak pernah nyangkut
+local function ensureTrackCollisionsSafe()
+    local track = workspace:FindFirstChild("StadiumRaceTrack")
+    if track then
+        for _, part in ipairs(track:GetDescendants()) do
+            if part:IsA("BasePart") then
+                local name = part.Name:lower()
+                if name:find("arch") or name:find("pillar") or name:find("tiang") or name:find("startline") then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+end
+
+-- =============================================================================
 -- SPAWN PEMBALAP (RACER)
 -- =============================================================================
 local function spawnRacerVehicle(racerData)
@@ -300,20 +352,13 @@ local function spawnRacerVehicle(racerData)
     if #waypoints == 0 then
         setupWaypoints()
     end
+    ensureTrackCollisionsSafe()
 
     local racerIndex = 0
     for _ in pairs(racers) do racerIndex = racerIndex + 1 end
     local color = VEHICLE_COLORS[(racerIndex % #VEHICLE_COLORS) + 1]
 
-    local startWP = waypoints[1]
-    local nextWP = waypoints[2] or waypoints[1]
-    local trackDir = (nextWP.Position - startWP.Position).Unit
-    local rightDir = Vector3.new(-trackDir.Z, 0, trackDir.X).Unit
-
-    local row = math.floor(racerIndex / 2)
-    local col = (racerIndex % 2 == 0) and -1 or 1
-    local spawnPos = startWP.Position - (trackDir * (row * 14)) + (rightDir * (col * 8)) + Vector3.new(0, 3, 0)
-    local spawnCFrame = CFrame.lookAt(spawnPos, spawnPos + trackDir)
+    local spawnCFrame = getStartingGridCFrame(racerIndex)
 
     local vType = racerData.vehicle
     if not vType or (vType ~= "car" and vType ~= "motorcycle") then
@@ -746,7 +791,7 @@ local function setupPlayerHUD(player)
         -- Main Control Frame
         local mainFrame = Instance.new("Frame")
         mainFrame.Name = "MainControls"
-        mainFrame.Size = UDim2.new(0, 580, 0, 120)
+        mainFrame.Size = UDim2.new(0, 680, 0, 120)
         mainFrame.Position = UDim2.new(0.5, 0, 1, -75)
         mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
         mainFrame.BackgroundColor3 = Color3.fromRGB(15, 23, 42)
@@ -846,15 +891,10 @@ local function setupPlayerHUD(player)
                 r.spinTimer = 0
                 r.infoLabel.Text = "🏁 Lap 1/" .. tostring(totalLaps)
                 
-                local startWP = waypoints[1]
-                if startWP and r.primaryPart then
-                    local trackDir = Vector3.new(1, 0, 0)
-                    if waypoints[2] then trackDir = (waypoints[2].Position - startWP.Position).Unit end
-                    local rightDir = Vector3.new(-trackDir.Z, 0, trackDir.X).Unit
-                    local row = math.floor(rIdx / 2)
-                    local col = (rIdx % 2 == 0) and -1 or 1
-                    local p = startWP.Position - (trackDir * (row * 14)) + (rightDir * (col * 8)) + Vector3.new(0, 3, 0)
-                    r.primaryPart.CFrame = CFrame.lookAt(p, p + trackDir)
+                if r.primaryPart then
+                    local pCF = getStartingGridCFrame(rIdx)
+                    r.primaryPart.CFrame = pCF
+                    if r.bg then r.bg.CFrame = pCF end
                     if r.bv then r.bv.Velocity = Vector3.new(0, 0, 0) end
                 end
                 rIdx = rIdx + 1
@@ -896,6 +936,13 @@ local function setupPlayerHUD(player)
             end
         end)
 
+        -- 6. Tombol TELEPORT KE MIMBAR VIP
+        makeButton("🎪 TELEPORT\nKE MIMBAR", Color3.fromRGB(14, 165, 233), function()
+            if player.Character then
+                teleportStreamerToSpectatorStand(player.Character)
+            end
+        end)
+
         -- Toggle hide/show
         toggleBtn.MouseButton1Click:Connect(function()
             mainFrame.Visible = not mainFrame.Visible
@@ -904,10 +951,41 @@ local function setupPlayerHUD(player)
     end
 end
 
+-- Teleport Karakter Host/Streamer ke Mimbar Komentator
+local function teleportStreamerToSpectatorStand(character)
+    if not character then return end
+    local root = character:WaitForChild("HumanoidRootPart", 5)
+    if not root then return end
+
+    task.wait(0.2)
+    local track = workspace:FindFirstChild("StadiumRaceTrack")
+    local hostSpawn = (track and track:FindFirstChild("HostSpawnLocation")) or workspace:FindFirstChild("HostSpawnLocation")
+
+    if hostSpawn then
+        root.CFrame = hostSpawn.CFrame + Vector3.new(0, 3, 0)
+    else
+        root.CFrame = CFrame.lookAt(Vector3.new(182, 8, -15), Vector3.new(160, 3, -15))
+    end
+end
+
 -- Pasang HUD untuk setiap player yang bermain / baru masuk
-Players.PlayerAdded:Connect(setupPlayerHUD)
+local function onPlayerJoined(player)
+    setupPlayerHUD(player)
+
+    -- Auto-teleport ke mimbar komentator jika karakter spawn/respawn
+    player.CharacterAdded:Connect(function(char)
+        teleportStreamerToSpectatorStand(char)
+    end)
+    if player.Character then
+        task.spawn(function()
+            teleportStreamerToSpectatorStand(player.Character)
+        end)
+    end
+end
+
+Players.PlayerAdded:Connect(onPlayerJoined)
 for _, p in ipairs(Players:GetPlayers()) do
-    setupPlayerHUD(p)
+    onPlayerJoined(p)
 end
 
 -- =============================================================================
@@ -1025,15 +1103,10 @@ local function pollServer()
                                 r.spinTimer = 0
                                 r.infoLabel.Text = "🏁 Lap 1/" .. tostring(totalLaps)
                                 
-                                local startWP = waypoints[1]
-                                if startWP and r.primaryPart then
-                                    local trackDir = Vector3.new(1, 0, 0)
-                                    if waypoints[2] then trackDir = (waypoints[2].Position - startWP.Position).Unit end
-                                    local rightDir = Vector3.new(-trackDir.Z, 0, trackDir.X).Unit
-                                    local row = math.floor(rIdx / 2)
-                                    local col = (rIdx % 2 == 0) and -1 or 1
-                                    local p = startWP.Position - (trackDir * (row * 14)) + (rightDir * (col * 8)) + Vector3.new(0, 3, 0)
-                                    r.primaryPart.CFrame = CFrame.lookAt(p, p + trackDir)
+                                if r.primaryPart then
+                                    local pCF = getStartingGridCFrame(rIdx)
+                                    r.primaryPart.CFrame = pCF
+                                    if r.bg then r.bg.CFrame = pCF end
                                     if r.bv then r.bv.Velocity = Vector3.new(0, 0, 0) end
                                 end
                                 rIdx = rIdx + 1
@@ -1051,7 +1124,8 @@ end
 -- INTI RUNNER
 -- =============================================================================
 setupWaypoints()
-print("🏎️ [TikInfinity] Roblox Live Race Controller v2.2 Aktif!")
+ensureTrackCollisionsSafe()
+print("🏎️ [TikInfinity] Roblox Live Race Controller v2.3 Aktif!")
 
 task.spawn(function()
     while true do

@@ -106,34 +106,63 @@ for i = 1, segmentCount do
     end
 end
 
--- Gerbang Start / Finish Line dengan Lampu & Billboard Checkerboard
-local startPos = center + Vector3.new(radiusX, 0, 0)
-local archLeft = Instance.new("Part")
-archLeft.Size = Vector3.new(2.5, 16, 2.5)
-archLeft.Position = startPos + Vector3.new(0, 8, -(trackWidth / 2 + 3))
-archLeft.Color = Color3.fromRGB(15, 23, 42)
-archLeft.Anchored = true
-archLeft.Parent = trackModel
+-- Garis Start/Finish Line Checkerboard di Aspal
+local startLine = Instance.new("Part")
+startLine.Name = "StartFinishLine"
+startLine.Size = Vector3.new(trackWidth, 0.4, 4)
+startLine.CFrame = CFrame.lookAt(Vector3.new(radiusX, 1.25, 0), Vector3.new(radiusX, 1.25, 10))
+startLine.Color = Color3.fromRGB(248, 250, 252)
+startLine.Material = Enum.Material.SmoothPlastic
+startLine.Anchored = true
+startLine.CanCollide = false
+startLine.Parent = trackModel
 
-local archRight = Instance.new("Part")
-archRight.Size = Vector3.new(2.5, 16, 2.5)
-archRight.Position = startPos + Vector3.new(0, 8, (trackWidth / 2 + 3))
-archRight.Color = Color3.fromRGB(15, 23, 42)
-archRight.Anchored = true
-archRight.Parent = trackModel
+-- Strip Checkerboard hitam di garis start
+local checkStrip = Instance.new("Part")
+checkStrip.Size = Vector3.new(trackWidth, 0.45, 1.5)
+checkStrip.Position = Vector3.new(radiusX, 1.28, 0)
+checkStrip.Color = Color3.fromRGB(15, 23, 42)
+checkStrip.Material = Enum.Material.SmoothPlastic
+checkStrip.Anchored = true
+checkStrip.CanCollide = false
+checkStrip.Parent = trackModel
+
+-- Gerbang Start / Finish Line (Lebar & CanCollide = false agar mobil TIDAK PERNAH NYANGKUT!)
+local startPos = Vector3.new(radiusX, 1.2, 0)
+local archClearance = trackWidth / 2 + 5 -- 19 studs dari tengah (5 studs di luar barrier neon)
+
+local archInner = Instance.new("Part")
+archInner.Name = "StartArch_InnerPillar"
+archInner.Size = Vector3.new(3, 18, 3)
+archInner.Position = startPos + Vector3.new(-archClearance, 9, 0)
+archInner.Color = Color3.fromRGB(15, 23, 42)
+archInner.Anchored = true
+archInner.CanCollide = false -- AMAN: Tidak akan pernah nyangkut!
+archInner.Parent = trackModel
+
+local archOuter = Instance.new("Part")
+archOuter.Name = "StartArch_OuterPillar"
+archOuter.Size = Vector3.new(3, 18, 3)
+archOuter.Position = startPos + Vector3.new(archClearance, 9, 0)
+archOuter.Color = Color3.fromRGB(15, 23, 42)
+archOuter.Anchored = true
+archOuter.CanCollide = false -- AMAN: Tidak akan pernah nyangkut!
+archOuter.Parent = trackModel
 
 local archTop = Instance.new("Part")
-archTop.Size = Vector3.new(4, 3.5, trackWidth + 8)
-archTop.Position = startPos + Vector3.new(0, 16, 0)
+archTop.Name = "StartArch_Beam"
+archTop.Size = Vector3.new(trackWidth + 14, 3.8, 3.5)
+archTop.Position = startPos + Vector3.new(0, 18, 0)
 archTop.Color = Color3.fromRGB(234, 179, 8)
 archTop.Material = Enum.Material.Neon
 archTop.Anchored = true
+archTop.CanCollide = false
 archTop.Parent = trackModel
 
--- Spanduk Teks Start / Finish
-local surfaceGui = Instance.new("SurfaceGui")
-surfaceGui.Face = Enum.NormalId.Front
-surfaceGui.Parent = archTop
+-- Spanduk Teks Depan (Menghadap mobil yang mendekat dari belakang garis start / -Z)
+local sgFront = Instance.new("SurfaceGui")
+sgFront.Face = Enum.NormalId.Back
+sgFront.Parent = archTop
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 1, 0)
@@ -142,7 +171,168 @@ titleLabel.Font = Enum.Font.GothamBlack
 titleLabel.Text = "🏁 TIKTOK LIVE RACE ARENA 🏁"
 titleLabel.TextScaled = true
 titleLabel.TextColor3 = Color3.fromRGB(15, 23, 42)
-titleLabel.Parent = surfaceGui
+titleLabel.Parent = sgFront
+
+-- Spanduk Teks Belakang (Menghadap pembalap yang melewati finish / +Z)
+local sgBack = Instance.new("SurfaceGui")
+sgBack.Face = Enum.NormalId.Front
+sgBack.Parent = archTop
+
+local finishLabel = Instance.new("TextLabel")
+finishLabel.Size = UDim2.new(1, 0, 1, 0)
+finishLabel.BackgroundTransparency = 1
+finishLabel.Font = Enum.Font.GothamBlack
+finishLabel.Text = "🏁 FINISH LINE 🏁"
+finishLabel.TextScaled = true
+finishLabel.TextColor3 = Color3.fromRGB(15, 23, 42)
+finishLabel.Parent = sgBack
+
+-- =============================================================================
+-- PANGGUNG VIP STREAMER & KOMENTATOR (HOST SPECTATOR STAND)
+-- =============================================================================
+-- Terletak tepat di samping garis start pada posisi tinggi dengan pemandangan
+-- penuh ke seluruh arena balap dan grid mobil!
+local standPos = Vector3.new(radiusX + 22, 6, -15)
+
+local standBase = Instance.new("Part")
+standBase.Name = "HostSpectatorStand"
+standBase.Size = Vector3.new(20, 2, 32)
+standBase.Position = standPos
+standBase.Color = Color3.fromRGB(30, 41, 59)
+standBase.Material = Enum.Material.DiamondPlate
+standBase.Anchored = true
+standBase.CanCollide = true
+standBase.Parent = trackModel
+
+-- Tiang Penyangga Panggung (4 Tiang)
+local legOffsets = {
+    Vector3.new(8, -3.5, 14),
+    Vector3.new(-8, -3.5, 14),
+    Vector3.new(8, -3.5, -14),
+    Vector3.new(-8, -3.5, -14)
+}
+for _, legOff in ipairs(legOffsets) do
+    local leg = Instance.new("Part")
+    leg.Size = Vector3.new(2, 5, 2)
+    leg.Position = standPos + legOff
+    leg.Color = Color3.fromRGB(15, 23, 42)
+    leg.Anchored = true
+    leg.CanCollide = true
+    leg.Parent = trackModel
+end
+
+-- Tangga / Ramp Akses ke Panggung
+local ramp = Instance.new("WedgePart")
+ramp.Size = Vector3.new(6, 6, 14)
+ramp.CFrame = CFrame.lookAt(standPos + Vector3.new(0, -3, -23), standPos + Vector3.new(0, -3, -15)) * CFrame.Angles(0, math.rad(180), 0)
+ramp.Color = Color3.fromRGB(51, 65, 85)
+ramp.Material = Enum.Material.DiamondPlate
+ramp.Anchored = true
+ramp.CanCollide = true
+ramp.Parent = trackModel
+
+-- Pagar Kaca Transparan Menghadap Arena Balap
+local glassFront = Instance.new("Part")
+glassFront.Size = Vector3.new(0.8, 4.2, 32)
+glassFront.Position = standPos + Vector3.new(-9.6, 3.1, 0)
+glassFront.Color = Color3.fromRGB(186, 230, 253)
+glassFront.Material = Enum.Material.Glass
+glassFront.Transparency = 0.55
+glassFront.Anchored = true
+glassFront.CanCollide = true
+glassFront.Parent = trackModel
+
+-- Meja Komentator Live
+local desk = Instance.new("Part")
+desk.Size = Vector3.new(3.5, 3.2, 12)
+desk.Position = standPos + Vector3.new(-6.8, 2.6, 0)
+desk.Color = Color3.fromRGB(15, 23, 42)
+desk.Material = Enum.Material.SmoothPlastic
+desk.Anchored = true
+desk.CanCollide = true
+desk.Parent = trackModel
+
+-- Layar Monitor Siaran di Meja
+local deskScreen = Instance.new("Part")
+deskScreen.Size = Vector3.new(0.5, 2.2, 8)
+deskScreen.Position = desk.Position + Vector3.new(0, 2.5, 0)
+deskScreen.Color = Color3.fromRGB(14, 165, 233)
+deskScreen.Material = Enum.Material.Neon
+deskScreen.Anchored = true
+deskScreen.CanCollide = false
+deskScreen.Parent = trackModel
+
+local sgDesk = Instance.new("SurfaceGui")
+sgDesk.Face = Enum.NormalId.Right
+sgDesk.Parent = deskScreen
+local screenLabel = Instance.new("TextLabel")
+screenLabel.Size = UDim2.new(1, 0, 1, 0)
+screenLabel.BackgroundTransparency = 1
+screenLabel.Font = Enum.Font.GothamBold
+screenLabel.Text = "🎙️ LIVE STREAM DIRECTOR"
+screenLabel.TextScaled = true
+screenLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+screenLabel.Parent = sgDesk
+
+-- Atap Kanopi VIP
+local roof = Instance.new("Part")
+roof.Size = Vector3.new(22, 1.5, 34)
+roof.Position = standPos + Vector3.new(0, 14, 0)
+roof.Color = Color3.fromRGB(15, 23, 42)
+roof.Anchored = true
+roof.CanCollide = true
+roof.Parent = trackModel
+
+local roofPillar = Instance.new("Part")
+roofPillar.Size = Vector3.new(1.8, 14, 1.8)
+roofPillar.Position = standPos + Vector3.new(9, 7, 0)
+roofPillar.Color = Color3.fromRGB(51, 65, 85)
+roofPillar.Anchored = true
+roofPillar.Parent = trackModel
+
+-- Plang Lampu Neon Mimbar
+local bannerSign = Instance.new("Part")
+bannerSign.Size = Vector3.new(1, 3.2, 22)
+bannerSign.Position = standPos + Vector3.new(-10.5, 14.5, 0)
+bannerSign.Color = Color3.fromRGB(56, 189, 248)
+bannerSign.Material = Enum.Material.Neon
+bannerSign.Anchored = true
+bannerSign.CanCollide = false
+bannerSign.Parent = trackModel
+
+local sgBanner = Instance.new("SurfaceGui")
+sgBanner.Face = Enum.NormalId.Left
+sgBanner.Parent = bannerSign
+local bannerText = Instance.new("TextLabel")
+bannerText.Size = UDim2.new(1, 0, 1, 0)
+bannerText.BackgroundTransparency = 1
+bannerText.Font = Enum.Font.GothamBlack
+bannerText.Text = "🎙️ HOST & KOMENTATOR VIP 🎙️"
+bannerText.TextScaled = true
+bannerText.TextColor3 = Color3.fromRGB(15, 23, 42)
+bannerText.Parent = sgBanner
+
+-- SpawnLocation Khusus Host/Streamer (Langsung Menghadap Garis Start!)
+local hostSpawn = Instance.new("SpawnLocation")
+hostSpawn.Name = "HostSpawnLocation"
+hostSpawn.Size = Vector3.new(8, 0.6, 8)
+hostSpawn.Position = standPos + Vector3.new(1, 1.4, 0)
+hostSpawn.CFrame = CFrame.lookAt(standPos + Vector3.new(1, 1.4, 0), Vector3.new(radiusX, 3, -15))
+hostSpawn.Color = Color3.fromRGB(59, 130, 246)
+hostSpawn.Material = Enum.Material.Neon
+hostSpawn.Anchored = true
+hostSpawn.CanCollide = true
+hostSpawn.Neutral = true
+hostSpawn.Duration = 0
+hostSpawn.Parent = trackModel
+
+-- Hapus default SpawnLocation di baseplate kosong (koordinat 0,0,0) agar TIDAK NYASAR!
+for _, item in ipairs(Workspace:GetChildren()) do
+    if item:IsA("SpawnLocation") and item ~= hostSpawn then
+        item:Destroy()
+        print("🗑️ SpawnLocation lama di luar sirkuit berhasil dibersihkan.")
+    end
+end
 
 -- Lampu Sorot Stadion (4 Pilar Lampu)
 local lightPoles = {
