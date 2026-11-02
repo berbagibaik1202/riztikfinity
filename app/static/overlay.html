@@ -76,7 +76,7 @@
       pointer-events: auto;
     }
 
-    /* Nametag above avatar */
+    /* Nametag above avatar - Always LTR and un-mirrored */
     .avatar-nametag {
       background: rgba(15, 23, 42, 0.92);
       border: 1.5px solid rgba(244, 63, 94, 0.7);
@@ -92,9 +92,12 @@
       align-items: center;
       gap: 5px;
       flex-shrink: 0;
+      direction: ltr !important;
+      unicode-bidi: normal !important;
+      transform: none !important;
     }
 
-    /* Speech Bubble for Comments */
+    /* Speech Bubble for Comments - Always LTR and un-mirrored */
     .speech-bubble {
       position: absolute;
       bottom: 108px;
@@ -112,6 +115,8 @@
       z-index: 40;
       pointer-events: auto;
       flex-shrink: 0;
+      direction: ltr !important;
+      unicode-bidi: normal !important;
     }
 
     .speech-bubble::after {
@@ -141,6 +146,7 @@
     .avatar-sprite {
       width: 100%;
       height: 100%;
+      transform-origin: center center;
       transition: transform 0.15s ease-out;
     }
 
@@ -648,6 +654,7 @@
           this.speed = -Math.abs(this.speed);
         }
         this.el.style.left = `${this.x}px`;
+        this.el.style.transform = "none";
 
         // Flip ONLY the character sprite so the face looks in walking direction,
         // while the nametag and comment speech bubble ALWAYS remain normal and un-mirrored!

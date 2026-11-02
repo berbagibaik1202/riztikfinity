@@ -118,7 +118,11 @@ class TestOverlayEventRequest(BaseModel):
 async def get_index():
     index_path = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_path):
-        return FileResponse(index_path)
+        response = FileResponse(index_path)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
     return {"message": "Dashboard UI file not found."}
 
 
@@ -126,7 +130,11 @@ async def get_index():
 async def get_overlay():
     overlay_path = os.path.join(STATIC_DIR, "overlay.html")
     if os.path.exists(overlay_path):
-        return FileResponse(overlay_path)
+        response = FileResponse(overlay_path)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
     return {"message": "Overlay UI file not found."}
 
 
