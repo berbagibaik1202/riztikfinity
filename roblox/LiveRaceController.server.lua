@@ -687,11 +687,12 @@ end
 -- HITUNG POSISI GRID START (ANTI-NYANGKUT & RAPI)
 -- =============================================================================
 local function getStartingGridCFrame(racerIndex)
-    local track = workspace:FindFirstChild("StadiumRaceTrack")
-    local startLinePart = track and track:FindFirstChild("StartFinishLine")
+    local startLinePart = workspace:FindFirstChild("StartFinishLine", true)
+        or workspace:FindFirstChild("PStart", true)
+        or workspace:FindFirstChild("Gridspot", true)
 
     local startCF
-    if startLinePart then
+    if startLinePart and startLinePart:IsA("BasePart") then
         startCF = startLinePart.CFrame
     elseif #waypoints >= 2 then
         local w1 = waypoints[1].Position
@@ -1432,13 +1433,17 @@ local function teleportStreamerToSpectatorStand(character)
     if not root then return end
 
     task.wait(0.2)
-    local track = workspace:FindFirstChild("StadiumRaceTrack")
-    local hostSpawn = (track and track:FindFirstChild("HostSpawnLocation")) or workspace:FindFirstChild("HostSpawnLocation")
+    local hostSpawn = workspace:FindFirstChild("HostSpawnLocation", true)
 
     if hostSpawn then
         root.CFrame = hostSpawn.CFrame + Vector3.new(0, 3, 0)
     else
-        root.CFrame = CFrame.lookAt(Vector3.new(182, 8, -15), Vector3.new(160, 3, -15))
+        local startLinePart = workspace:FindFirstChild("StartFinishLine", true) or workspace:FindFirstChild("PStart", true)
+        if startLinePart then
+            root.CFrame = startLinePart.CFrame * CFrame.new(20, 8, -10)
+        else
+            root.CFrame = CFrame.lookAt(Vector3.new(182, 8, -15), Vector3.new(160, 3, -15))
+        end
     end
 end
 
