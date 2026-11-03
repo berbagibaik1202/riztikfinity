@@ -211,20 +211,50 @@ class TikTokManager:
                 },
             )
 
-            # Check if user joins Roblox Live Race via chat keyword (e.g. "ikut")
-            if roblox_race_mgr.enabled and "ikut" in text.lower():
-                join_res = roblox_race_mgr.join_racer(
-                    user_id=unique_id,
-                    nickname=user_name,
-                    avatar=avatar_url,
-                )
-                if join_res.get("status") == "ok":
-                    vehicle = join_res["racer"]["vehicle"]
-                    vehicle_name = "Mobil" if vehicle == "car" else "Motor"
+            # Check if user joins or changes vehicle in Roblox Live Race via chat
+            if roblox_race_mgr.enabled:
+                t_lower = text.lower()
+                clean_uid = str(unique_id or user_name).strip().lower()
+
+                # Command ganti kendaraan: !ferrari, !lambo, !bugatti, !porsche, !motor, !kart, !truck, !cyber
+                detected_vehicle = None
+                if "!ferrari" in t_lower or "ganti ferrari" in t_lower or "pilih ferrari" in t_lower or "ikut ferrari" in t_lower:
+                    detected_vehicle = "ferrari"
+                elif "!lambo" in t_lower or "!lamborghini" in t_lower or "ganti lambo" in t_lower or "pilih lambo" in t_lower or "ikut lambo" in t_lower:
+                    detected_vehicle = "lamborghini"
+                elif "!bugatti" in t_lower or "ganti bugatti" in t_lower or "pilih bugatti" in t_lower or "ikut bugatti" in t_lower:
+                    detected_vehicle = "bugatti"
+                elif "!porsche" in t_lower or "ganti porsche" in t_lower or "pilih porsche" in t_lower or "ikut porsche" in t_lower:
+                    detected_vehicle = "porsche"
+                elif "!motor" in t_lower or "!bike" in t_lower or "ganti motor" in t_lower or "ikut motor" in t_lower:
+                    detected_vehicle = "motorcycle"
+                elif "!kart" in t_lower or "ganti kart" in t_lower or "ikut kart" in t_lower:
+                    detected_vehicle = "kart"
+                elif "!truck" in t_lower or "ganti truck" in t_lower or "ikut truck" in t_lower:
+                    detected_vehicle = "truck"
+                elif "!cyber" in t_lower or "ganti cyber" in t_lower:
+                    detected_vehicle = "cyber"
+
+                if detected_vehicle:
+                    res = roblox_race_mgr.change_vehicle(user_id=unique_id, nickname=user_name, vehicle=detected_vehicle)
+                    v_title = detected_vehicle.capitalize()
                     await self.queue_manager.broadcast_log(
                         "INFO",
-                        f"🏎️ {user_name} bergabung ke Balapan Roblox ({vehicle_name}) via chat 'ikut'!",
+                        f"🏎️ {user_name} berganti/memilih kendaraan: {v_title}!",
                     )
+                elif "ikut" in t_lower:
+                    join_res = roblox_race_mgr.join_racer(
+                        user_id=unique_id,
+                        nickname=user_name,
+                        avatar=avatar_url,
+                    )
+                    if join_res.get("status") == "ok":
+                        vehicle = join_res["racer"]["vehicle"]
+                        vehicle_name = "Mobil" if vehicle == "car" else vehicle.capitalize()
+                        await self.queue_manager.broadcast_log(
+                            "INFO",
+                            f"🏎️ {user_name} bergabung ke Balapan Roblox ({vehicle_name}) via chat 'ikut'!",
+                        )
 
             # Match controller rules for game
             for rule in self.config.rules:
@@ -291,12 +321,13 @@ class TikTokManager:
                             f"⚡ {user_name} mempercepat laju {mult}x di Balapan Roblox!",
                         )
 
-                # 2. Donut / Doughnut: Turbo speed!
+                # 2. Donut / Doughnut: Transform to Ferrari + Turbo speed!
                 elif "doughnut" in g_lower or "donat" in g_lower or "donut" in g_lower:
+                    roblox_race_mgr.change_vehicle(user_id=unique_id, nickname=user_name, vehicle="ferrari")
                     roblox_race_mgr.boost_racer(user_id=unique_id, nickname=user_name, multiplier=8, turbo=True)
                     await self.queue_manager.broadcast_log(
                         "INFO",
-                        f"🍩 {user_name} mengaktifkan KECEPATAN TURBO DONAT di Balapan Roblox!",
+                        f"🍩 {user_name} MENGGANTI MOBIL JADI FERRARI + AKTIFKAN TURBO DONAT!",
                     )
 
                 # 3. Cap / Topi / Hat: Shoot Rocket at opponents!
@@ -305,6 +336,16 @@ class TikTokManager:
                     await self.queue_manager.broadcast_log(
                         "INFO",
                         f"🚀 {user_name} menembakkan ROKET TOPI ke lawan di Balapan Roblox!",
+                    )
+
+                # 4. Gift Mewah / Supercars (Paus/Whale, Singa/Lion, Corgi, Galaxy, Universe, Mobil):
+                elif any(k in g_lower for k in ["whale", "paus", "lion", "singa", "corgi", "galaxy", "universe", "mobil", "car"]):
+                    target_v = "bugatti" if ("galaxy" in g_lower or "universe" in g_lower) else "lamborghini"
+                    roblox_race_mgr.change_vehicle(user_id=unique_id, nickname=user_name, vehicle=target_v)
+                    roblox_race_mgr.boost_racer(user_id=unique_id, nickname=user_name, multiplier=10, turbo=True)
+                    await self.queue_manager.broadcast_log(
+                        "INFO",
+                        f"🌟 {user_name} MENG-UPGRADE KENDARAAN JADI HYPERCAR {target_v.upper()}!",
                     )
 
             # Match controller rules for game

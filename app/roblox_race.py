@@ -74,8 +74,19 @@ class RobloxRaceManager:
                 return {"status": "already_joined", "racer": self.racers[clean_id]}
 
             # Determine vehicle type
-            v_type = vehicle
-            if not v_type or v_type not in ["car", "motorcycle"]:
+            valid_vehicles = [
+                "car", "motorcycle", "ferrari", "lamborghini",
+                "bugatti", "porsche", "kart", "truck", "cyber"
+            ]
+            v_raw = str(vehicle or "").strip().lower()
+            if "lambo" in v_raw:
+                v_type = "lamborghini"
+            elif v_raw in valid_vehicles:
+                v_type = v_raw
+            else:
+                v_type = None
+
+            if not v_type:
                 if self.vehicle_preference == "mixed":
                     # Alternate between car and motorcycle
                     v_type = "car" if len(self.racers) % 2 == 0 else "motorcycle"
@@ -99,6 +110,45 @@ class RobloxRaceManager:
             self._enqueue_action("spawn_racer", racer)
             self._notify("racer_joined", racer)
             return {"status": "ok", "racer": racer}
+
+    def change_vehicle(self, user_id: str, nickname: str, vehicle: str) -> dict:
+        """Switch a racer's vehicle dynamically (e.g. ferrari, lamborghini, bugatti, porsche, motorcycle, kart)."""
+        with self._lock:
+            clean_id = str(user_id or nickname).strip().lower()
+            v_raw = str(vehicle or "").strip().lower()
+
+            if "lambo" in v_raw or "lamborghini" in v_raw:
+                v_type = "lamborghini"
+            elif "ferrari" in v_raw:
+                v_type = "ferrari"
+            elif "bugatti" in v_raw or "chiron" in v_raw:
+                v_type = "bugatti"
+            elif "porsche" in v_raw or "911" in v_raw:
+                v_type = "porsche"
+            elif "motor" in v_raw or "bike" in v_raw or "ninja" in v_raw or "ducati" in v_raw:
+                v_type = "motorcycle"
+            elif "kart" in v_raw:
+                v_type = "kart"
+            elif "truck" in v_raw or "monster" in v_raw:
+                v_type = "truck"
+            elif "cyber" in v_raw or "tron" in v_raw:
+                v_type = "cyber"
+            else:
+                v_type = "car"
+
+            if clean_id not in self.racers:
+                return self.join_racer(user_id=clean_id, nickname=nickname, vehicle=v_type)
+
+            self.racers[clean_id]["vehicle"] = v_type
+            payload = {
+                "user_id": clean_id,
+                "nickname": nickname,
+                "vehicle": v_type,
+                "timestamp": time.time(),
+            }
+            self._enqueue_action("change_vehicle", payload)
+            self._notify("racer_vehicle_changed", payload)
+            return {"status": "ok", "vehicle": v_type, "racer": self.racers[clean_id]}
 
     def boost_racer(self, user_id: str, nickname: str, multiplier: int = 1, turbo: bool = False) -> dict:
         """Apply speed acceleration or turbo to a racer."""

@@ -289,6 +289,401 @@ local function createMotorcycleModel(color)
 end
 
 -- =============================================================================
+-- SUPERCAR BUILDERS (FERRARI, LAMBORGHINI, BUGATTI) & ASSET LOADER
+-- =============================================================================
+local function createFerrariModel(color)
+    local car = Instance.new("Model")
+    car.Name = "FerrariSupercar"
+
+    local ferrariRed = Color3.fromRGB(220, 38, 38)
+    local chassis = Instance.new("Part")
+    chassis.Name = "PrimaryPart"
+    chassis.Size = Vector3.new(7.2, 1.8, 12.5)
+    chassis.Material = Enum.Material.SmoothPlastic
+    chassis.Color = ferrariRed
+    chassis.Anchored = false
+    chassis.CanCollide = true
+    chassis.Parent = car
+    car.PrimaryPart = chassis
+
+    -- Front Carbon Splitter
+    local splitter = Instance.new("Part")
+    splitter.Size = Vector3.new(7.6, 0.4, 2)
+    splitter.Position = chassis.Position + Vector3.new(0, -0.6, -5.8)
+    splitter.Color = Color3.fromRGB(15, 23, 42)
+    splitter.Anchored = false
+    splitter.CanCollide = false
+    splitter.Parent = car
+    local sWeld = Instance.new("WeldConstraint")
+    sWeld.Part0 = chassis
+    sWeld.Part1 = splitter
+    sWeld.Parent = chassis
+
+    -- Ferrari Yellow Badge
+    local badge = Instance.new("Part")
+    badge.Size = Vector3.new(0.8, 0.2, 0.8)
+    badge.Position = chassis.Position + Vector3.new(0, 0.95, -4.2)
+    badge.Color = Color3.fromRGB(250, 204, 21)
+    badge.Material = Enum.Material.Neon
+    badge.Anchored = false
+    badge.CanCollide = false
+    badge.Parent = car
+    local bWeld = Instance.new("WeldConstraint")
+    bWeld.Part0 = chassis
+    bWeld.Part1 = badge
+    bWeld.Parent = chassis
+
+    -- Aero Cockpit Glass
+    local cockpit = Instance.new("Part")
+    cockpit.Size = Vector3.new(5.2, 1.5, 6.2)
+    cockpit.Position = chassis.Position + Vector3.new(0, 1.6, -0.2)
+    cockpit.Color = Color3.fromRGB(15, 23, 42)
+    cockpit.Material = Enum.Material.Glass
+    cockpit.Transparency = 0.35
+    cockpit.Anchored = false
+    cockpit.CanCollide = false
+    cockpit.Parent = car
+    local cWeld = Instance.new("WeldConstraint")
+    cWeld.Part0 = chassis
+    cWeld.Part1 = cockpit
+    cWeld.Parent = chassis
+
+    -- Rear Aero Wing & Diffuser
+    local wing = Instance.new("Part")
+    wing.Size = Vector3.new(6.8, 0.3, 1.4)
+    wing.Position = chassis.Position + Vector3.new(0, 1.8, 5.6)
+    wing.Color = Color3.fromRGB(15, 23, 42)
+    wing.Anchored = false
+    wing.CanCollide = false
+    wing.Parent = car
+    local wWeld = Instance.new("WeldConstraint")
+    wWeld.Part0 = chassis
+    wWeld.Part1 = wing
+    wWeld.Parent = chassis
+
+    -- Quad Racing Exhaust
+    local exhaust = Instance.new("Part")
+    exhaust.Name = "Exhaust"
+    exhaust.Size = Vector3.new(2.4, 0.6, 0.6)
+    exhaust.Position = chassis.Position + Vector3.new(0, -0.2, 6.4)
+    exhaust.Color = Color3.fromRGB(51, 65, 85)
+    exhaust.Anchored = false
+    exhaust.CanCollide = false
+    exhaust.Parent = car
+    local exWeld = Instance.new("WeldConstraint")
+    exWeld.Part0 = chassis
+    exWeld.Part1 = exhaust
+    exWeld.Parent = chassis
+
+    local fire = Instance.new("Fire")
+    fire.Name = "TurboFire"
+    fire.Size = 5
+    fire.Heat = 14
+    fire.Color = Color3.fromRGB(239, 68, 68)
+    fire.SecondaryColor = Color3.fromRGB(245, 158, 11)
+    fire.Enabled = false
+    fire.Parent = exhaust
+
+    -- Wheels
+    local wheelOffsets = {
+        Vector3.new(3.8, -0.6, 4.2),
+        Vector3.new(-3.8, -0.6, 4.2),
+        Vector3.new(3.8, -0.6, -4.2),
+        Vector3.new(-3.8, -0.6, -4.2),
+    }
+    for _, offset in ipairs(wheelOffsets) do
+        local wheel = Instance.new("Part")
+        wheel.Shape = Enum.PartType.Cylinder
+        wheel.Size = Vector3.new(1.4, 2.8, 2.8)
+        wheel.CFrame = (chassis.CFrame + offset) * CFrame.Angles(0, 0, math.rad(90))
+        wheel.Color = Color3.fromRGB(15, 23, 42)
+        wheel.Material = Enum.Material.Rubber
+        wheel.Anchored = false
+        wheel.CanCollide = false
+        wheel.Parent = car
+        local ww = Instance.new("WeldConstraint")
+        ww.Part0 = chassis
+        ww.Part1 = wheel
+        ww.Parent = chassis
+    end
+
+    return car, chassis, exhaust
+end
+
+local function createLamborghiniModel(color)
+    local car = Instance.new("Model")
+    car.Name = "LamborghiniSupercar"
+
+    local lamboYellow = Color3.fromRGB(234, 179, 8)
+    local chassis = Instance.new("Part")
+    chassis.Name = "PrimaryPart"
+    chassis.Size = Vector3.new(7.4, 1.7, 12.8)
+    chassis.Material = Enum.Material.SmoothPlastic
+    chassis.Color = lamboYellow
+    chassis.Anchored = false
+    chassis.CanCollide = true
+    chassis.Parent = car
+    car.PrimaryPart = chassis
+
+    -- Sharp Angular Nose
+    local nose = Instance.new("WedgePart")
+    nose.Size = Vector3.new(7, 1.4, 3)
+    nose.CFrame = (chassis.CFrame + Vector3.new(0, -0.15, -6.5)) * CFrame.Angles(0, math.rad(180), 0)
+    nose.Color = lamboYellow
+    nose.Anchored = false
+    nose.CanCollide = false
+    nose.Parent = car
+    local nWeld = Instance.new("WeldConstraint")
+    nWeld.Part0 = chassis
+    nWeld.Part1 = nose
+    nWeld.Parent = chassis
+
+    -- Stealth Canopy
+    local canopy = Instance.new("Part")
+    canopy.Size = Vector3.new(5.0, 1.5, 6)
+    canopy.Position = chassis.Position + Vector3.new(0, 1.5, -0.4)
+    canopy.Color = Color3.fromRGB(15, 23, 42)
+    canopy.Material = Enum.Material.Glass
+    canopy.Transparency = 0.25
+    canopy.Anchored = false
+    canopy.CanCollide = false
+    canopy.Parent = car
+    local cWeld = Instance.new("WeldConstraint")
+    cWeld.Part0 = chassis
+    cWeld.Part1 = canopy
+    cWeld.Parent = chassis
+
+    -- High Carbon GT Wing
+    local wing = Instance.new("Part")
+    wing.Size = Vector3.new(7.6, 0.4, 1.6)
+    wing.Position = chassis.Position + Vector3.new(0, 2.4, 5.5)
+    wing.Color = Color3.fromRGB(15, 23, 42)
+    wing.Anchored = false
+    wing.CanCollide = false
+    wing.Parent = car
+    local wWeld = Instance.new("WeldConstraint")
+    wWeld.Part0 = chassis
+    wWeld.Part1 = wing
+    wWeld.Parent = chassis
+
+    -- Twin Central Hex Exhaust
+    local exhaust = Instance.new("Part")
+    exhaust.Name = "Exhaust"
+    exhaust.Size = Vector3.new(1.6, 0.8, 0.8)
+    exhaust.Position = chassis.Position + Vector3.new(0, 0.2, 6.5)
+    exhaust.Color = Color3.fromRGB(30, 41, 59)
+    exhaust.Anchored = false
+    exhaust.CanCollide = false
+    exhaust.Parent = car
+    local exWeld = Instance.new("WeldConstraint")
+    exWeld.Part0 = chassis
+    exWeld.Part1 = exhaust
+    exWeld.Parent = chassis
+
+    local fire = Instance.new("Fire")
+    fire.Name = "TurboFire"
+    fire.Size = 5
+    fire.Heat = 16
+    fire.Color = Color3.fromRGB(6, 182, 212)
+    fire.SecondaryColor = Color3.fromRGB(249, 115, 22)
+    fire.Enabled = false
+    fire.Parent = exhaust
+
+    -- Wheels
+    local wheelOffsets = {
+        Vector3.new(3.8, -0.6, 4.4),
+        Vector3.new(-3.8, -0.6, 4.4),
+        Vector3.new(3.8, -0.6, -4.0),
+        Vector3.new(-3.8, -0.6, -4.0),
+    }
+    for _, offset in ipairs(wheelOffsets) do
+        local wheel = Instance.new("Part")
+        wheel.Shape = Enum.PartType.Cylinder
+        wheel.Size = Vector3.new(1.5, 3.0, 3.0)
+        wheel.CFrame = (chassis.CFrame + offset) * CFrame.Angles(0, 0, math.rad(90))
+        wheel.Color = Color3.fromRGB(15, 23, 42)
+        wheel.Material = Enum.Material.Rubber
+        wheel.Anchored = false
+        wheel.CanCollide = false
+        wheel.Parent = car
+        local ww = Instance.new("WeldConstraint")
+        ww.Part0 = chassis
+        ww.Part1 = wheel
+        ww.Parent = chassis
+    end
+
+    return car, chassis, exhaust
+end
+
+local function createBugattiModel(color)
+    local car = Instance.new("Model")
+    car.Name = "BugattiHypercar"
+
+    local bugattiBlue = Color3.fromRGB(2, 132, 199)
+    local chassis = Instance.new("Part")
+    chassis.Name = "PrimaryPart"
+    chassis.Size = Vector3.new(7.6, 2.0, 13)
+    chassis.Material = Enum.Material.SmoothPlastic
+    chassis.Color = bugattiBlue
+    chassis.Anchored = false
+    chassis.CanCollide = true
+    chassis.Parent = car
+    car.PrimaryPart = chassis
+
+    -- Bugatti Horseshoe Grille
+    local grille = Instance.new("Part")
+    grille.Size = Vector3.new(2.4, 1.2, 0.4)
+    grille.Position = chassis.Position + Vector3.new(0, -0.2, -6.6)
+    grille.Color = Color3.fromRGB(226, 232, 240)
+    grille.Material = Enum.Material.SmoothPlastic
+    grille.Anchored = false
+    grille.CanCollide = false
+    grille.Parent = car
+    local gWeld = Instance.new("WeldConstraint")
+    gWeld.Part0 = chassis
+    gWeld.Part1 = grille
+    gWeld.Parent = chassis
+
+    -- Black Side C-Bar
+    local cBar = Instance.new("Part")
+    cBar.Size = Vector3.new(7.8, 1.8, 5.5)
+    cBar.Position = chassis.Position + Vector3.new(0, 0.1, 0.5)
+    cBar.Color = Color3.fromRGB(15, 23, 42)
+    cBar.Anchored = false
+    cBar.CanCollide = false
+    cBar.Parent = car
+    local cbWeld = Instance.new("WeldConstraint")
+    cbWeld.Part0 = chassis
+    cbWeld.Part1 = cBar
+    cbWeld.Parent = chassis
+
+    -- Active Aero Spoiler
+    local spoiler = Instance.new("Part")
+    spoiler.Size = Vector3.new(7.2, 0.4, 1.8)
+    spoiler.Position = chassis.Position + Vector3.new(0, 2.2, 5.6)
+    spoiler.Color = bugattiBlue
+    spoiler.Anchored = false
+    spoiler.CanCollide = false
+    spoiler.Parent = car
+    local spWeld = Instance.new("WeldConstraint")
+    spWeld.Part0 = chassis
+    spWeld.Part1 = spoiler
+    spWeld.Parent = chassis
+
+    local exhaust = Instance.new("Part")
+    exhaust.Name = "Exhaust"
+    exhaust.Size = Vector3.new(2.2, 0.8, 0.8)
+    exhaust.Position = chassis.Position + Vector3.new(0, -0.1, 6.6)
+    exhaust.Color = Color3.fromRGB(71, 85, 105)
+    exhaust.Anchored = false
+    exhaust.CanCollide = false
+    exhaust.Parent = car
+    local exWeld = Instance.new("WeldConstraint")
+    exWeld.Part0 = chassis
+    exWeld.Part1 = exhaust
+    exWeld.Parent = chassis
+
+    local fire = Instance.new("Fire")
+    fire.Name = "TurboFire"
+    fire.Size = 5
+    fire.Heat = 18
+    fire.Color = Color3.fromRGB(59, 130, 246)
+    fire.SecondaryColor = Color3.fromRGB(249, 115, 22)
+    fire.Enabled = false
+    fire.Parent = exhaust
+
+    -- Wheels
+    local wheelOffsets = {
+        Vector3.new(4.0, -0.6, 4.2),
+        Vector3.new(-4.0, -0.6, 4.2),
+        Vector3.new(4.0, -0.6, -4.2),
+        Vector3.new(-4.0, -0.6, -4.2),
+    }
+    for _, offset in ipairs(wheelOffsets) do
+        local wheel = Instance.new("Part")
+        wheel.Shape = Enum.PartType.Cylinder
+        wheel.Size = Vector3.new(1.6, 3.0, 3.0)
+        wheel.CFrame = (chassis.CFrame + offset) * CFrame.Angles(0, 0, math.rad(90))
+        wheel.Color = Color3.fromRGB(15, 23, 42)
+        wheel.Material = Enum.Material.Rubber
+        wheel.Anchored = false
+        wheel.CanCollide = false
+        wheel.Parent = car
+        local ww = Instance.new("WeldConstraint")
+        ww.Part0 = chassis
+        ww.Part1 = wheel
+        ww.Parent = chassis
+    end
+
+    return car, chassis, exhaust
+end
+
+-- =============================================================================
+-- VEHICLE RESOLVER (RO-RACING CUSTOM MODELS + PROCEDURAL FALLBACK)
+-- =============================================================================
+local function getVehicleModel(vType, color)
+    local vRaw = tostring(vType or "car"):lower()
+
+    -- 1. Cek folder Custom Model dari RoRacing / Toolbox di ReplicatedStorage.RaceVehicles
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local customFolder = ReplicatedStorage:FindFirstChild("RaceVehicles") or game:GetService("ServerStorage"):FindFirstChild("RaceVehicles")
+    if customFolder then
+        for _, m in ipairs(customFolder:GetChildren()) do
+            if m:IsA("Model") then
+                local mName = m.Name:lower()
+                if mName == vRaw or mName:find(vRaw) or vRaw:find(mName) then
+                    local clone = m:Clone()
+                    if not clone.PrimaryPart then
+                        local p = clone:FindFirstChildWhichIsA("BasePart")
+                        if p then clone.PrimaryPart = p end
+                    end
+                    if clone.PrimaryPart then
+                        local exhaust = clone:FindFirstChild("Exhaust", true)
+                        if not exhaust then
+                            exhaust = Instance.new("Part")
+                            exhaust.Name = "Exhaust"
+                            exhaust.Size = Vector3.new(1, 0.5, 0.5)
+                            exhaust.CFrame = clone.PrimaryPart.CFrame * CFrame.new(0, -0.5, 5)
+                            exhaust.Anchored = false
+                            exhaust.CanCollide = false
+                            exhaust.Transparency = 1
+                            exhaust.Parent = clone
+                            local w = Instance.new("WeldConstraint")
+                            w.Part0 = clone.PrimaryPart
+                            w.Part1 = exhaust
+                            w.Parent = clone.PrimaryPart
+                        end
+                        if not exhaust:FindFirstChild("TurboFire") then
+                            local fire = Instance.new("Fire")
+                            fire.Name = "TurboFire"
+                            fire.Size = 4
+                            fire.Heat = 14
+                            fire.Color = Color3.fromRGB(249, 115, 22)
+                            fire.Enabled = false
+                            fire.Parent = exhaust
+                        end
+                        return clone, clone.PrimaryPart, exhaust
+                    end
+                end
+            end
+        end
+    end
+
+    -- 2. Fallback Model Supercar Procedural
+    if vRaw == "ferrari" then
+        return createFerrariModel(color)
+    elseif vRaw == "lamborghini" or vRaw == "lambo" then
+        return createLamborghiniModel(color)
+    elseif vRaw == "bugatti" then
+        return createBugattiModel(color)
+    elseif vRaw == "motorcycle" or vRaw == "motor" then
+        return createMotorcycleModel(color)
+    else
+        return createCarModel(color)
+    end
+end
+
+-- =============================================================================
 -- HITUNG POSISI GRID START (ANTI-NYANGKUT & RAPI)
 -- =============================================================================
 local function getStartingGridCFrame(racerIndex)
@@ -361,7 +756,7 @@ local function spawnRacerVehicle(racerData)
     local spawnCFrame = getStartingGridCFrame(racerIndex)
 
     local vType = racerData.vehicle
-    if not vType or (vType ~= "car" and vType ~= "motorcycle") then
+    if not vType then
         if vehiclePreference == "mixed" then
             vType = (racerIndex % 2 == 0) and "car" or "motorcycle"
         else
@@ -369,12 +764,7 @@ local function spawnRacerVehicle(racerData)
         end
     end
 
-    local model, primaryPart, exhaust
-    if vType == "motorcycle" then
-        model, primaryPart, exhaust = createMotorcycleModel(color)
-    else
-        model, primaryPart, exhaust = createCarModel(color)
-    end
+    local model, primaryPart, exhaust = getVehicleModel(vType, color)
 
     model:SetPrimaryPartCFrame(spawnCFrame)
 
@@ -419,7 +809,12 @@ local function spawnRacerVehicle(racerData)
     nameLabel.Font = Enum.Font.GothamBold
     nameLabel.TextSize = 14
     nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    local vIcon = (vType == "motorcycle") and "🏍️ " or "🏎️ "
+    local vIcon = "🏎️ "
+    if vType == "motorcycle" then vIcon = "🏍️ "
+    elseif vType == "ferrari" then vIcon = "🐎 "
+    elseif vType == "lamborghini" or vType == "lambo" then vIcon = "🐂 "
+    elseif vType == "bugatti" then vIcon = "⚡ "
+    end
     nameLabel.Text = vIcon .. tostring(racerData.nickname or uid)
     nameLabel.TextScaled = true
     nameLabel.Parent = bgFrame
@@ -470,6 +865,85 @@ local function spawnRacerVehicle(racerData)
     end
 
     return racerEntry
+end
+
+-- =============================================================================
+-- TRANSFORMASI KENDARAAN PEMBALAP (GANTI FERRARI, LAMBO, BUGATTI, MOTOR DLL)
+-- =============================================================================
+local function changeRacerVehicle(racer, newVehicleType)
+    if not racer or not racer.model or not racer.primaryPart then return end
+
+    local oldModel = racer.model
+    local oldCF = racer.primaryPart.CFrame
+    local oldVel = racer.bv and racer.bv.Velocity or Vector3.new(0, 0, 0)
+
+    -- Partikel Transformasi Asap & Percikan
+    local poof = Instance.new("Part")
+    poof.Size = Vector3.new(1, 1, 1)
+    poof.Position = oldCF.Position
+    poof.Anchored = true
+    poof.CanCollide = false
+    poof.Transparency = 1
+    poof.Parent = workspace
+
+    local smoke = Instance.new("Smoke")
+    smoke.Color = Color3.fromRGB(254, 240, 138)
+    smoke.Size = 10
+    smoke.RiseVelocity = 4
+    smoke.Parent = poof
+    game:GetService("Debris"):AddItem(poof, 1.5)
+
+    -- Buat model kendaraan baru
+    local newModel, newPrimary, newExhaust = getVehicleModel(newVehicleType, racer.color)
+    newModel:SetPrimaryPartCFrame(oldCF)
+    newModel.Parent = workspace
+
+    local bg = Instance.new("BodyGyro")
+    bg.MaxTorque = Vector3.new(400000, 400000, 400000)
+    bg.P = 15000
+    bg.CFrame = oldCF
+    bg.Parent = newPrimary
+
+    local bv = Instance.new("BodyVelocity")
+    bv.MaxForce = Vector3.new(400000, 400000, 400000)
+    bv.Velocity = oldVel
+    bv.Parent = newPrimary
+
+    -- Pindahkan billboard tag ke mobil baru
+    local tag = oldModel:FindFirstChild("RacerTag", true)
+    if tag then
+        tag.Parent = newPrimary
+        local nickLabel = tag:FindFirstChild("Nickname", true)
+        if nickLabel then
+            local icon = "🏎️ "
+            local nRaw = newVehicleType:lower()
+            if nRaw == "motorcycle" or nRaw == "motor" then icon = "🏍️ "
+            elseif nRaw == "ferrari" then icon = "🐎 "
+            elseif nRaw == "lamborghini" or nRaw == "lambo" then icon = "🐂 "
+            elseif nRaw == "bugatti" then icon = "⚡ "
+            end
+            nickLabel.Text = icon .. racer.nickname
+        end
+    end
+
+    oldModel:Destroy()
+    racer.model = newModel
+    racer.primaryPart = newPrimary
+    racer.exhaust = newExhaust
+    racer.bg = bg
+    racer.bv = bv
+    racer.vehicleType = newVehicleType
+
+    print("🔄 [Transform] " .. racer.nickname .. " berubah jadi " .. newVehicleType:upper() .. "!")
+
+    if cameraRemote then
+        cameraRemote:FireAllClients("GIFT_FOCUS", {
+            userId = racer.userId,
+            nickname = racer.nickname,
+            giftName = "Ganti " .. newVehicleType:upper() .. "! 🔥",
+            duration = 3.5
+        })
+    end
 end
 
 -- =============================================================================
@@ -1068,6 +1542,15 @@ local function pollServer()
 
                     if act == "spawn_racer" then
                         spawnRacerVehicle(payload)
+
+                    elseif act == "change_vehicle" then
+                        local uid = tostring(payload.user_id or payload.nickname):lower()
+                        local racer = racers[uid]
+                        if racer then
+                            changeRacerVehicle(racer, payload.vehicle or "ferrari")
+                        else
+                            spawnRacerVehicle(payload)
+                        end
 
                     elseif act == "boost" then
                         local uid = tostring(payload.user_id or payload.nickname):lower()

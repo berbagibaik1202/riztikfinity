@@ -593,6 +593,26 @@ async def post_roblox_test_action(req: RobloxTestActionRequest):
         await queue_mgr.broadcast_log("INFO", f"🚀 [TEST] {uname} menembakkan ROKET TOPI!")
         return JSONResponse(content=res)
 
+    elif req.test_type == "change_ferrari":
+        res = roblox_race_mgr.change_vehicle(user_id=uid, nickname=uname, vehicle="ferrari")
+        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} mengganti kendaraan ke FERRARI!")
+        return JSONResponse(content=res)
+
+    elif req.test_type == "change_lambo":
+        res = roblox_race_mgr.change_vehicle(user_id=uid, nickname=uname, vehicle="lamborghini")
+        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} mengganti kendaraan ke LAMBORGHINI!")
+        return JSONResponse(content=res)
+
+    elif req.test_type == "change_bugatti":
+        res = roblox_race_mgr.change_vehicle(user_id=uid, nickname=uname, vehicle="bugatti")
+        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} mengganti kendaraan ke BUGATTI CHIRON!")
+        return JSONResponse(content=res)
+
+    elif req.test_type == "change_motor":
+        res = roblox_race_mgr.change_vehicle(user_id=uid, nickname=uname, vehicle="motorcycle")
+        await queue_mgr.broadcast_log("INFO", f"🏍️ [TEST] {uname} mengganti kendaraan ke MOTOR!")
+        return JSONResponse(content=res)
+
     return JSONResponse(status_code=400, content={"status": "error", "message": "Unknown test type"})
 
 

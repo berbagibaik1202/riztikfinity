@@ -112,6 +112,12 @@ def test_roblox_race():
     assert t1["status"] == "ok"
     assert roblox_race_mgr.racers["user_101"]["turbo_active"] is True
 
+    # Change vehicle (e.g. to ferrari, lamborghini, bugatti)
+    cv = roblox_race_mgr.change_vehicle("user_101", "SpeedDemon", vehicle="ferrari")
+    assert cv["status"] == "ok"
+    assert cv["vehicle"] == "ferrari"
+    assert roblox_race_mgr.racers["user_101"]["vehicle"] == "ferrari"
+
     # Rocket
     rk = roblox_race_mgr.fire_rocket("user_102", "BikerPro")
     assert rk["status"] == "ok"
@@ -122,10 +128,11 @@ def test_roblox_race():
 
     # Poll actions
     actions = roblox_race_mgr.poll_actions(since_id=0)
-    assert len(actions) >= 4
+    assert len(actions) >= 5
     act_types = [a["action"] for a in actions]
     assert "spawn_racer" in act_types
     assert "boost" in act_types
+    assert "change_vehicle" in act_types
     assert "fire_rocket" in act_types
     assert "start_race" in act_types
     print(f"  [OK] Successfully enqueued and polled {len(actions)} Roblox race actions.")

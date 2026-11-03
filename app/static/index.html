@@ -487,6 +487,22 @@
               <span>🚀</span> Tembak Roket!
             </button>
           </div>
+
+          <!-- Baris Uji Coba Ganti Mobil Supercar Penonton -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-800/80">
+            <button onclick="testRobloxAction('change_ferrari')" class="bg-red-950/70 hover:bg-red-900/80 py-1.5 px-2 rounded-xl text-[11px] font-bold text-red-300 border border-red-800 transition flex items-center justify-center gap-1">
+              <span>🐎</span> Ganti Ferrari (!ferrari)
+            </button>
+            <button onclick="testRobloxAction('change_lambo')" class="bg-amber-950/70 hover:bg-amber-900/80 py-1.5 px-2 rounded-xl text-[11px] font-bold text-amber-300 border border-amber-800 transition flex items-center justify-center gap-1">
+              <span>🐂</span> Ganti Lambo (!lambo)
+            </button>
+            <button onclick="testRobloxAction('change_bugatti')" class="bg-sky-950/70 hover:bg-sky-900/80 py-1.5 px-2 rounded-xl text-[11px] font-bold text-sky-300 border border-sky-800 transition flex items-center justify-center gap-1">
+              <span>⚡</span> Ganti Bugatti (!bugatti)
+            </button>
+            <button onclick="testRobloxAction('change_motor')" class="bg-cyan-950/70 hover:bg-cyan-900/80 py-1.5 px-2 rounded-xl text-[11px] font-bold text-cyan-300 border border-cyan-800 transition flex items-center justify-center gap-1">
+              <span>🏍️</span> Ganti Motor (!motor)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -726,6 +742,19 @@
         </div>
         <p class="text-xs text-slate-300">
           Di Explorer Roblox Studio, buka <b>StarterPlayer</b> ➔ klik kanan <b>StarterPlayerScripts</b> ➔ <b>Insert Object</b> ➔ <b>LocalScript</b>. Beri nama <code class="text-purple-300 bg-slate-900 px-1 py-0.5 rounded font-mono">LiveRaceCamera</code>, lalu tempel isi script ini. Kamera otomatis menyorot mobil penonton saat gift masuk dan berganti angle dinamis (belakang, depan, drone)!
+        </p>
+      </div>
+
+      <!-- Step 2C: Custom Supercars & RoRacing Assets -->
+      <div class="p-4 bg-slate-950/80 border border-slate-800 rounded-xl space-y-2">
+        <span class="font-bold text-sm text-yellow-400 flex items-center gap-2">
+          <span>🏎️</span> Integrasi Mobil Supercar & Asset RoRacing (Misano, Ferrari, Lambo)
+        </span>
+        <p class="text-xs text-slate-300">
+          Penonton live TikTok bisa berganti mobil secara real-time via chat: <code class="text-yellow-300 bg-slate-900 px-1 py-0.5 rounded font-mono">!ferrari</code>, <code class="text-yellow-300 bg-slate-900 px-1 py-0.5 rounded font-mono">!lambo</code>, <code class="text-yellow-300 bg-slate-900 px-1 py-0.5 rounded font-mono">!bugatti</code>, <code class="text-yellow-300 bg-slate-900 px-1 py-0.5 rounded font-mono">!motor</code>, atau otomatis saat kirim <b>Gift Donat 🍩</b>!
+        </p>
+        <p class="text-xs text-slate-400">
+          💡 <b>Cara Pasang Model 3D Sendiri (Opsional):</b> Buat folder bernama <code class="text-cyan-300 bg-slate-900 px-1 py-0.5 rounded font-mono">RaceVehicles</code> di <b>ReplicatedStorage</b>. Masukkan model mobil dari <i>RoRacing / Toolbox</i> bernama <code class="text-slate-200">Ferrari</code>, <code class="text-slate-200">Lamborghini</code>, <code class="text-slate-200">Bugatti</code>, <code class="text-slate-200">Motorcycle</code>. Jika belum ada, sistem akan otomatis memakai model 3D procedural bawaan yang sudah siap pakai!
         </p>
       </div>
 
