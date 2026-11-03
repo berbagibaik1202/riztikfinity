@@ -1056,9 +1056,14 @@ local function fireRocket(shooterEntry)
 end
 
 -- =============================================================================
--- HITUNG MUNDUR (COUNTDOWN 3.. 2.. 1.. GOOO!) DENGAN TAMPILAN RAKSASA
+-- HITUNG MUNDUR (COUNTDOWN 3.. 2.. 1.. GOOO!) DENGAN TAMPILAN RAKSASA & AUTO-HIDE
 -- =============================================================================
-local function showCountdownBanner(text, color, scale)
+local countdownBannerToken = 0
+
+local function showCountdownBanner(text, color, scale, autoFadeDuration)
+    countdownBannerToken = countdownBannerToken + 1
+    local currentToken = countdownBannerToken
+
     for _, player in ipairs(Players:GetPlayers()) do
         local pGui = player:FindFirstChild("PlayerGui")
         if pGui then
@@ -1066,11 +1071,56 @@ local function showCountdownBanner(text, color, scale)
             if cGui then
                 local label = cGui:FindFirstChild("CountLabel", true)
                 if label then
+                    local stroke = label:FindFirstChildOfClass("UIStroke")
                     label.Text = text
                     label.TextColor3 = color
                     label.Visible = true
                     label.TextTransparency = 0
-                    label.Size = UDim2.new(0, 400 * scale, 0, 180 * scale)
+                    if stroke then stroke.Transparency = 0 end
+
+                    -- Efek animasi pop-in dengan TweenService
+                    local targetSize = UDim2.new(0, 400 * (scale or 1), 0, 180 * (scale or 1))
+                    label.Size = UDim2.new(0, 320 * (scale or 1), 0, 140 * (scale or 1))
+                    pcall(function()
+                        local popTween = TweenService:Create(
+                            label,
+                            TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+                            { Size = targetSize }
+                        )
+                        popTween:Play()
+                    end)
+
+                    -- Garansi auto-fade otomatis (pasti hilang, tidak akan pernah nyangkut!)
+                    if autoFadeDuration and autoFadeDuration > 0 then
+                        task.delay(math.max(0.1, autoFadeDuration - 0.4), function()
+                            if countdownBannerToken == currentToken and label and label.Parent then
+                                pcall(function()
+                                    local fadeTween = TweenService:Create(
+                                        label,
+                                        TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                                        { TextTransparency = 1 }
+                                    )
+                                    fadeTween:Play()
+                                    if stroke then
+                                        local strokeTween = TweenService:Create(
+                                            stroke,
+                                            TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                                            { Transparency = 1 }
+                                        )
+                                        strokeTween:Play()
+                                    end
+                                end)
+                            end
+                        end)
+
+                        task.delay(autoFadeDuration, function()
+                            if countdownBannerToken == currentToken and label and label.Parent then
+                                label.Visible = false
+                                label.TextTransparency = 0
+                                if stroke then stroke.Transparency = 0 end
+                            end
+                        end)
+                    end
                 end
             end
         end
@@ -1078,6 +1128,7 @@ local function showCountdownBanner(text, color, scale)
 end
 
 local function hideCountdownBanner()
+    countdownBannerToken = countdownBannerToken + 1 -- batalkan timer banner sebelumnya
     for _, player in ipairs(Players:GetPlayers()) do
         local pGui = player:FindFirstChild("PlayerGui")
         if pGui then
@@ -1086,6 +1137,9 @@ local function hideCountdownBanner()
                 local label = cGui:FindFirstChild("CountLabel", true)
                 if label then
                     label.Visible = false
+                    label.TextTransparency = 0
+                    local stroke = label:FindFirstChildOfClass("UIStroke")
+                    if stroke then stroke.Transparency = 0 end
                 end
             end
         end
@@ -1124,8 +1178,8 @@ local function startCountdownSequence()
     countdownSound:Play()
     task.wait(1.0)
 
-    -- 🏁 GOOO!
-    showCountdownBanner("🏁 GOOO! 🏁", Color3.fromRGB(254, 240, 138), 1.4) -- Emas
+    -- 🏁 GOOO! (Dengan auto-fadeout 1.2 detik terjamin!)
+    showCountdownBanner("🏁 GOOO! 🏁", Color3.fromRGB(254, 240, 138), 1.4, 1.2) -- Emas
     countdownSound.PlaybackSpeed = 2.0
     countdownSound:Play()
 
@@ -1141,20 +1195,24 @@ local function startCountdownSequence()
     isCountingDown = false
     print("🚀 BALAPAN DIMULAI!")
 
-    -- Sinkronkan status aktif ke TikInfinity Server
-    pcall(function()
-        HttpService:PostAsync(
-            API_BASE_URL .. "/api/roblox/state",
-            HttpService:JSONEncode({
-                race_state = "racing",
-                total_laps = totalLaps
-            }),
-            Enum.HttpContentType.ApplicationJson
-        )
+    -- Sinkronkan status aktif ke TikInfinity Server secara asynchronous (NON-BLOCKING)
+    task.spawn(function()
+        pcall(function()
+            HttpService:PostAsync(
+                API_BASE_URL .. "/api/roblox/state",
+                HttpService:JSONEncode({
+                    race_state = "racing",
+                    total_laps = totalLaps
+                }),
+                Enum.HttpContentType.ApplicationJson
+            )
+        end)
     end)
 
-    task.wait(1.5)
-    hideCountdownBanner()
+    -- Pengaman tambahan: pastikan banner tertutup setelah 1.3 detik
+    task.delay(1.3, function()
+        hideCountdownBanner()
+    end)
 end
 
 -- =============================================================================
@@ -1164,21 +1222,25 @@ local function announceWinner(winnerEntry)
     isRaceRunning = false
     print("🏆 PEMENANG BALAPAN: " .. winnerEntry.nickname)
 
-    showCountdownBanner("🏆 JUARA: " .. winnerEntry.nickname .. "!", Color3.fromRGB(254, 240, 138), 1.2)
+    -- Tampilkan nama juara selama 4.0 detik dengan auto-fadeout
+    showCountdownBanner("🏆 JUARA: " .. winnerEntry.nickname .. "!", Color3.fromRGB(254, 240, 138), 1.2, 4.0)
 
-    pcall(function()
-        HttpService:PostAsync(
-            API_BASE_URL .. "/api/roblox/state",
-            HttpService:JSONEncode({
-                race_state = "finished",
-                winner = {
-                    user_id = winnerEntry.userId,
-                    nickname = winnerEntry.nickname,
-                    vehicle = winnerEntry.vehicleType,
-                }
-            }),
-            Enum.HttpContentType.ApplicationJson
-        )
+    -- Sinkronisasi pemenang ke backend secara asynchronous (NON-BLOCKING)
+    task.spawn(function()
+        pcall(function()
+            HttpService:PostAsync(
+                API_BASE_URL .. "/api/roblox/state",
+                HttpService:JSONEncode({
+                    race_state = "finished",
+                    winner = {
+                        user_id = winnerEntry.userId,
+                        nickname = winnerEntry.nickname,
+                        vehicle = winnerEntry.vehicleType,
+                    }
+                }),
+                Enum.HttpContentType.ApplicationJson
+            )
+        end)
     end)
 
     task.spawn(function()
@@ -1195,7 +1257,7 @@ local function announceWinner(winnerEntry)
             firework.Parent = workspace
             task.wait(0.4)
         end
-        task.wait(4)
+        task.wait(2)
         hideCountdownBanner()
     end)
 end
@@ -1342,15 +1404,17 @@ local function setupPlayerHUD(player)
                 nickname = name,
                 vehicle = vehiclePreference
             })
-            pcall(function()
-                HttpService:PostAsync(
-                    API_BASE_URL .. "/api/roblox/test-action",
-                    HttpService:JSONEncode({
-                        test_type = "join_rose",
-                        nickname = name
-                    }),
-                    Enum.HttpContentType.ApplicationJson
-                )
+            task.spawn(function()
+                pcall(function()
+                    HttpService:PostAsync(
+                        API_BASE_URL .. "/api/roblox/test-action",
+                        HttpService:JSONEncode({
+                            test_type = "join_rose",
+                            nickname = name
+                        }),
+                        Enum.HttpContentType.ApplicationJson
+                    )
+                end)
             end)
         end)
 
@@ -1375,12 +1439,14 @@ local function setupPlayerHUD(player)
                 rIdx = rIdx + 1
             end
             hideCountdownBanner()
-            pcall(function()
-                HttpService:PostAsync(
-                    API_BASE_URL .. "/api/roblox/control",
-                    HttpService:JSONEncode({ action = "reset" }),
-                    Enum.HttpContentType.ApplicationJson
-                )
+            task.spawn(function()
+                pcall(function()
+                    HttpService:PostAsync(
+                        API_BASE_URL .. "/api/roblox/control",
+                        HttpService:JSONEncode({ action = "reset" }),
+                        Enum.HttpContentType.ApplicationJson
+                    )
+                end)
             end)
         end)
 
@@ -1395,12 +1461,14 @@ local function setupPlayerHUD(player)
             if cameraRemote then
                 cameraRemote:FireAllClients("RACE_RESET")
             end
-            pcall(function()
-                HttpService:PostAsync(
-                    API_BASE_URL .. "/api/roblox/control",
-                    HttpService:JSONEncode({ action = "clear" }),
-                    Enum.HttpContentType.ApplicationJson
-                )
+            task.spawn(function()
+                pcall(function()
+                    HttpService:PostAsync(
+                        API_BASE_URL .. "/api/roblox/control",
+                        HttpService:JSONEncode({ action = "clear" }),
+                        Enum.HttpContentType.ApplicationJson
+                    )
+                end)
             end)
         end)
 
