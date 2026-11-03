@@ -53,10 +53,10 @@ local VEHICLE_COLORS = {
     Color3.fromRGB(236, 72, 153),  -- Pink Magenta
 }
 
--- Setup Audio Sederhana (Beep & Horn)
+-- Setup Audio Sederhana (Beep & Horn resmi bawaan engine Roblox, bebas error)
 local countdownSound = Instance.new("Sound")
 countdownSound.Name = "CountdownBeep"
-countdownSound.SoundId = "rbxassetid://9069609204"
+countdownSound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
 countdownSound.Volume = 1
 countdownSound.Parent = workspace
 
