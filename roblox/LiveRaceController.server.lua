@@ -60,10 +60,102 @@ countdownSound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
 countdownSound.Volume = 1
 countdownSound.Parent = workspace
 
+-- =============================================================================
+-- DETEKSI SPOT GRID START RESMI (MISANO CIRCUIT / RORACING / MODULAR)
+-- =============================================================================
+local function findGridSpots()
+    local spotContainers = {
+        workspace:FindFirstChild("Gridspots", true),
+        workspace:FindFirstChild("MotoGP Grid", true),
+        workspace:FindFirstChild("Starting Grid", true),
+        workspace:FindFirstChild("Grid", true),
+        workspace:FindFirstChild("StartingSpots", true),
+        workspace:FindFirstChild("GridSpots", true),
+    }
+
+    for _, container in ipairs(spotContainers) do
+        if container then
+            local spots = {}
+            for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("BasePart") or child:IsA("Model") then
+                    table.insert(spots, child)
+                end
+            end
+            if #spots > 0 then
+                table.sort(spots, function(a, b)
+                    local na = tonumber(a.Name:match("%d+")) or 999
+                    local nb = tonumber(b.Name:match("%d+")) or 999
+                    if na ~= nb then return na < nb end
+                    return a.Name < b.Name
+                end)
+                return spots
+            end
+        end
+    end
+    return nil
+end
+
 -- Pastikan folder Waypoints tersedia
 local function setupWaypoints()
     waypoints = {}
     local wpFolder = workspace:FindFirstChild("RaceWaypoints")
+    if wpFolder and #wpFolder:GetChildren() > 0 then
+        local children = wpFolder:GetChildren()
+        table.sort(children, function(a, b) return a.Name < b.Name end)
+        for _, child in ipairs(children) do
+            if child:IsA("BasePart") then
+                table.insert(waypoints, child)
+            end
+        end
+        return
+    end
+
+    -- Cek jika Sirkuit Misano World Circuit terpasang di Workspace
+    local misano = workspace:FindFirstChild("[V1.1] Misano World Circuit Marco Simoncelli", true)
+        or workspace:FindFirstChild("Misano World Circuit Marco Simoncelli", true)
+        or workspace:FindFirstChild("Misano", true)
+
+    if misano then
+        local turns = {}
+        for _, desc in ipairs(misano:GetDescendants()) do
+            if desc:IsA("Model") and desc.Name:lower():find("turn ") then
+                local num = tonumber(desc.Name:match("Turn%s+(%d+)"))
+                if num then
+                    local primary = desc.PrimaryPart or desc:FindFirstChildWhichIsA("BasePart")
+                    if primary then
+                        table.insert(turns, { num = num, part = primary, name = desc.Name })
+                    end
+                end
+            end
+        end
+
+        if #turns >= 4 then
+            table.sort(turns, function(a, b) return a.num < b.num end)
+            
+            if not wpFolder then
+                wpFolder = Instance.new("Folder")
+                wpFolder.Name = "RaceWaypoints"
+                wpFolder.Parent = workspace
+            end
+
+            -- Waypoint awal pada garis start / gridspot 1
+            local spots = findGridSpots()
+            if spots and #spots > 0 then
+                local s1 = spots[1]:IsA("Model") and (spots[1].PrimaryPart or spots[1]:FindFirstChildWhichIsA("BasePart")) or spots[1]
+                if s1 then
+                    table.insert(waypoints, s1)
+                end
+            end
+
+            for _, t in ipairs(turns) do
+                table.insert(waypoints, t.part)
+            end
+            print("🏁 Sirkuit Misano World Circuit Terdeteksi! Total Waypoint Tikungan:", #waypoints)
+            return
+        end
+    end
+
+    -- Sirkuit Standar Oval Stadium
     if not wpFolder then
         wpFolder = Instance.new("Folder")
         wpFolder.Name = "RaceWaypoints"
@@ -72,7 +164,7 @@ local function setupWaypoints()
         local radiusX = 140
         local radiusZ = 90
         local center = Vector3.new(0, 5, 0)
-        local count = 12
+        local count = 16
         for i = 1, count do
             local angle = (i / count) * math.pi * 2
             local pos = center + Vector3.new(math.cos(angle) * radiusX, 0, math.sin(angle) * radiusZ)
@@ -87,14 +179,6 @@ local function setupWaypoints()
             node.BrickColor = BrickColor.new("Bright yellow")
             node.Parent = wpFolder
             table.insert(waypoints, node)
-        end
-    else
-        local children = wpFolder:GetChildren()
-        table.sort(children, function(a, b) return a.Name < b.Name end)
-        for _, child in ipairs(children) do
-            if child:IsA("BasePart") then
-                table.insert(waypoints, child)
-            end
         end
     end
 end
@@ -619,57 +703,175 @@ local function createBugattiModel(color)
 end
 
 -- =============================================================================
--- VEHICLE RESOLVER (RO-RACING CUSTOM MODELS + PROCEDURAL FALLBACK)
+-- DETEKSI OTOMATIS ASSET MOBIL NYATA (FORTUNE NISSAN SILVIA S15, MISANO CARS, DLL)
 -- =============================================================================
-local function getVehicleModel(vType, color)
-    local vRaw = tostring(vType or "car"):lower()
+local function getAllAvailableCustomVehicles()
+    local list = {}
+    local seen = {}
 
-    -- 1. Cek folder Custom Model dari RoRacing / Toolbox di ReplicatedStorage.RaceVehicles
+    local function addModel(m)
+        if m and m:IsA("Model") and not seen[m] then
+            -- Pastikan bukan model karakter pemain, bukan track atau bangunan
+            if not m:FindFirstChildOfClass("Humanoid") or m:FindFirstChildOfClass("VehicleSeat") then
+                seen[m] = true
+                table.insert(list, m)
+            end
+        end
+    end
+
+    local ServerStorage = game:GetService("ServerStorage")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local customFolder = ReplicatedStorage:FindFirstChild("RaceVehicles") or game:GetService("ServerStorage"):FindFirstChild("RaceVehicles")
-    if customFolder then
-        for _, m in ipairs(customFolder:GetChildren()) do
-            if m:IsA("Model") then
-                local mName = m.Name:lower()
-                if mName == vRaw or mName:find(vRaw) or vRaw:find(mName) then
-                    local clone = m:Clone()
-                    if not clone.PrimaryPart then
-                        local p = clone:FindFirstChildWhichIsA("BasePart")
-                        if p then clone.PrimaryPart = p end
-                    end
-                    if clone.PrimaryPart then
-                        local exhaust = clone:FindFirstChild("Exhaust", true)
-                        if not exhaust then
-                            exhaust = Instance.new("Part")
-                            exhaust.Name = "Exhaust"
-                            exhaust.Size = Vector3.new(1, 0.5, 0.5)
-                            exhaust.CFrame = clone.PrimaryPart.CFrame * CFrame.new(0, -0.5, 5)
-                            exhaust.Anchored = false
-                            exhaust.CanCollide = false
-                            exhaust.Transparency = 1
-                            exhaust.Parent = clone
-                            local w = Instance.new("WeldConstraint")
-                            w.Part0 = clone.PrimaryPart
-                            w.Part1 = exhaust
-                            w.Parent = clone.PrimaryPart
-                        end
-                        if not exhaust:FindFirstChild("TurboFire") then
-                            local fire = Instance.new("Fire")
-                            fire.Name = "TurboFire"
-                            fire.Size = 4
-                            fire.Heat = 14
-                            fire.Color = Color3.fromRGB(249, 115, 22)
-                            fire.Enabled = false
-                            fire.Parent = exhaust
-                        end
-                        return clone, clone.PrimaryPart, exhaust
-                    end
+
+    -- 1. Periksa folder "Vehicles" / "Cars" di ServerStorage, ReplicatedStorage, dan Workspace
+    local searchContainers = {
+        ServerStorage:FindFirstChild("Vehicles", true),
+        ServerStorage:FindFirstChild("Cars", true),
+        ServerStorage:FindFirstChild("RaceVehicles", true),
+        ReplicatedStorage:FindFirstChild("Vehicles", true),
+        ReplicatedStorage:FindFirstChild("Cars", true),
+        ReplicatedStorage:FindFirstChild("RaceVehicles", true),
+        workspace:FindFirstChild("Vehicles", true),
+        workspace:FindFirstChild("Parked Vehicles", true),
+        workspace:FindFirstChild("RaceVehicles", true),
+    }
+
+    for _, container in ipairs(searchContainers) do
+        if container and (container:IsA("Folder") or container:IsA("Model")) then
+            for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("Model") then
+                    addModel(child)
                 end
             end
         end
     end
 
-    -- 2. Fallback Model Supercar Procedural
+    -- 2. Cari model mobil spesifik (Silvia, S15, Nissan, Fortune, Red Car, Blue Car, dll) di mana pun berada
+    for _, root in ipairs({ServerStorage, ReplicatedStorage, workspace}) do
+        for _, desc in ipairs(root:GetDescendants()) do
+            if desc:IsA("Model") and not seen[desc] then
+                local dName = desc.Name:lower()
+                if dName:find("silvia") or dName:find("s15") or dName:find("nissan") or dName:find("fortune")
+                    or dName:find("red car") or dName:find("blue car") or dName:find("black car") 
+                    or dName:find("white car") or dName:find("yellow car")
+                    or desc:FindFirstChildOfClass("VehicleSeat") or desc:FindFirstChild("DriveSeat") then
+                    addModel(desc)
+                end
+            end
+        end
+    end
+
+    return list
+end
+
+local function prepareCustomVehicleModel(templateModel, targetColor)
+    local clone = templateModel:Clone()
+    
+    -- Tentukan PrimaryPart (DriveSeat / VehicleSeat / Body / BasePart)
+    local primary = clone.PrimaryPart
+    if not primary then
+        primary = clone:FindFirstChild("DriveSeat")
+            or clone:FindFirstChildWhichIsA("VehicleSeat")
+            or clone:FindFirstChild("Chassis")
+            or clone:FindFirstChild("Body")
+            or clone:FindFirstChildWhichIsA("BasePart")
+        if primary then
+            clone.PrimaryPart = primary
+        end
+    end
+
+    if not primary then
+        return nil, nil, nil
+    end
+
+    -- Pastikan semua bagian tersambung rapi (weld) dan tidak kaku (Anchored = false) saat melaju
+    for _, part in ipairs(clone:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.Anchored = false
+            if part ~= primary and #part:GetJoints() == 0 then
+                local w = Instance.new("WeldConstraint")
+                w.Part0 = primary
+                w.Part1 = part
+                w.Parent = primary
+            end
+        end
+    end
+
+    -- Pasang knalpot & efek knalpot turbo
+    local exhaust = clone:FindFirstChild("Exhaust", true)
+    if not exhaust then
+        exhaust = Instance.new("Part")
+        exhaust.Name = "Exhaust"
+        exhaust.Size = Vector3.new(1, 0.5, 0.5)
+        local cf = primary.CFrame
+        exhaust.CFrame = cf * CFrame.new(0, -0.5, 5)
+        exhaust.Anchored = false
+        exhaust.CanCollide = false
+        exhaust.Transparency = 1
+        exhaust.Parent = clone
+
+        local w = Instance.new("WeldConstraint")
+        w.Part0 = primary
+        w.Part1 = exhaust
+        w.Parent = primary
+    end
+
+    if not exhaust:FindFirstChild("TurboFire") then
+        local fire = Instance.new("Fire")
+        fire.Name = "TurboFire"
+        fire.Size = 4
+        fire.Heat = 14
+        fire.Color = Color3.fromRGB(249, 115, 22)
+        fire.SecondaryColor = Color3.fromRGB(234, 179, 8)
+        fire.Enabled = false
+        fire.Parent = exhaust
+    end
+
+    if not exhaust:FindFirstChild("RevSmoke") then
+        local smoke = Instance.new("Smoke")
+        smoke.Name = "RevSmoke"
+        smoke.Size = 1.5
+        smoke.RiseVelocity = 3
+        smoke.Color = Color3.fromRGB(200, 200, 200)
+        smoke.Enabled = false
+        smoke.Parent = exhaust
+    end
+
+    return clone, primary, exhaust
+end
+
+-- =============================================================================
+-- VEHICLE RESOLVER (ASSET MODEL NYATA + SUPERCAR PROCEDURAL FALLBACK)
+-- =============================================================================
+local function getVehicleModel(vehicleType, color, racerIndex)
+    local vRaw = tostring(vehicleType or ""):lower()
+    local customList = getAllAvailableCustomVehicles()
+
+    -- 1. Jika penonton/streamer meminta tipe mobil spesifik (misal: !silvia, !nissan, !redcar, !ferrari, dll)
+    if vRaw ~= "" and vRaw ~= "car" and vRaw ~= "mixed" then
+        for _, m in ipairs(customList) do
+            local mName = m.Name:lower()
+            if mName:find(vRaw) or vRaw:find(mName) then
+                local c, p, e = prepareCustomVehicleModel(m, color)
+                if c and p and e then
+                    print("🚘 Memuat Model Aset Kustom:", m.Name)
+                    return c, p, e
+                end
+            end
+        end
+    end
+
+    -- 2. Jika ada koleksi mobil aset nyata (Nissan Silvia S15, Red Car, Blue Car, dll), pilih berurutan!
+    if #customList > 0 then
+        local pickedIndex = ((racerIndex or 0) % #customList) + 1
+        local chosenModel = customList[pickedIndex]
+        local c, p, e = prepareCustomVehicleModel(chosenModel, color)
+        if c and p and e then
+            print("🏎️ Menggunakan Mobil Aset Terbaru:", chosenModel.Name, "untuk racer #" .. tostring(racerIndex or 0))
+            return c, p, e
+        end
+    end
+
+    -- 3. Fallback Model Supercar Procedural 3D
     if vRaw == "ferrari" then
         return createFerrariModel(color)
     elseif vRaw == "lamborghini" or vRaw == "lambo" then
@@ -684,41 +886,75 @@ local function getVehicleModel(vType, color)
 end
 
 -- =============================================================================
--- HITUNG POSISI GRID START (ANTI-NYANGKUT & RAPI)
+-- HITUNG POSISI GRID START (ANTI-NYANGKUT & 100% DI DALAM JALAN ASPAL SIRKUIT)
 -- =============================================================================
 local function getStartingGridCFrame(racerIndex)
-    local startLinePart = workspace:FindFirstChild("StartFinishLine", true)
-        or workspace:FindFirstChild("PStart", true)
-        or workspace:FindFirstChild("Gridspot", true)
+    -- 1. Cek apakah ada Gridspots resmi dari Misano Circuit atau RoRacing di Workspace
+    local spots = findGridSpots()
+    if spots and #spots > 0 then
+        local spotIndex = (racerIndex % #spots) + 1
+        local spot = spots[spotIndex]
+        local spotCF = spot:IsA("Model") and spot:GetPivot() or spot.CFrame
 
-    local startCF
-    if startLinePart and startLinePart:IsA("BasePart") then
-        startCF = startLinePart.CFrame
-    elseif #waypoints >= 2 then
-        local w1 = waypoints[1].Position
-        local w2 = waypoints[2].Position
-        local dir = (w2 - w1).Unit
-        startCF = CFrame.lookAt(w1, w1 + dir)
-    else
-        startCF = CFrame.lookAt(Vector3.new(160, 1.25, 0), Vector3.new(160, 1.25, 10))
+        -- Hadapkan mobil lurus searah lintasan (menghadap ke waypoint terdekat)
+        local facingDir = spotCF.LookVector
+        if #waypoints >= 1 then
+            local toWP = (waypoints[1].Position - spotCF.Position).Unit
+            if toWP.Magnitude > 0.1 then
+                facingDir = toWP
+            end
+        end
+
+        local spawnPos = spotCF.Position + Vector3.new(0, 2.8, 0)
+        return CFrame.lookAt(spawnPos, spawnPos + facingDir)
     end
 
-    local forwardDir = startCF.LookVector
-    local rightDir = startCF.RightVector
+    -- 2. Ikuti kurva lintasan balap ke BELAKANG garis start (100% selalu di tengah jalan aspal)
+    if #waypoints >= 2 then
+        local row = math.floor(racerIndex / 2)
+        local col = (racerIndex % 2 == 0) and -1 or 1 -- -1 = lajur kiri, +1 = lajur kanan
 
+        local targetDistBack = 12 + (row * 14) -- Jarak mundur dari garis start (WP 1)
+        
+        -- Telusuri kurva waypoint ke belakang secara dinamis: WP 1 -> WP terakhir -> WP sebelumnya
+        local accumulated = 0
+        local currIdx = 1
+        local prevIdx = #waypoints
+
+        local chosenPos = waypoints[1].Position
+        local chosenDir = (waypoints[1].Position - waypoints[#waypoints].Position).Unit
+
+        while accumulated < targetDistBack and prevIdx > 1 do
+            local pStart = waypoints[currIdx].Position
+            local pEnd = waypoints[prevIdx].Position
+            local segLen = (pStart - pEnd).Magnitude
+
+            if accumulated + segLen >= targetDistBack then
+                local remaining = targetDistBack - accumulated
+                local frac = math.clamp(remaining / math.max(0.1, segLen), 0, 1)
+                chosenPos = pStart:Lerp(pEnd, frac)
+                chosenDir = (pStart - pEnd).Unit
+                break
+            else
+                accumulated = accumulated + segLen
+                currIdx = prevIdx
+                prevIdx = prevIdx - 1
+                chosenPos = pEnd
+            end
+        end
+
+        local rightDir = Vector3.new(-chosenDir.Z, 0, chosenDir.X).Unit
+        local laneOffset = rightDir * (col * 4.5) -- Lajur kiri / kanan
+        local spawnPos = chosenPos + laneOffset + Vector3.new(0, 2.8, 0)
+
+        return CFrame.lookAt(spawnPos, spawnPos + chosenDir)
+    end
+
+    -- 3. Fallback absolut jika belum ada sirkuit terpasang
     local row = math.floor(racerIndex / 2)
-    local col = (racerIndex % 2 == 0) and -1 or 1 -- -1 = lajur kiri, +1 = lajur kanan
-
-    local startMargin = 18 -- Jarak baris terdepan di BELAKANG garis start (18 studs agar bebas dari tiang/gerbang)
-    local rowSpacing = 16  -- Jarak antar baris ke belakang
-    local laneSpacing = 5.0 -- Jarak ke samping kiri/kanan dari marka tengah jalan
-
-    local spawnPos = startCF.Position 
-        - (forwardDir * (startMargin + (row * rowSpacing))) 
-        + (rightDir * (col * laneSpacing)) 
-        + Vector3.new(0, 2.5, 0)
-
-    return CFrame.lookAt(spawnPos, spawnPos + forwardDir)
+    local col = (racerIndex % 2 == 0) and -1 or 1
+    local spawnPos = Vector3.new(160 + (col * 4.5), 2.5, -(12 + (row * 14)))
+    return CFrame.lookAt(spawnPos, spawnPos + Vector3.new(0, 0, 1))
 end
 
 -- Pastikan semua tiang/gerbang start tidak memiliki tabrakan (CanCollide = false) agar mobil tidak pernah nyangkut
@@ -757,17 +993,16 @@ local function spawnRacerVehicle(racerData)
     local spawnCFrame = getStartingGridCFrame(racerIndex)
 
     local vType = racerData.vehicle
-    if not vType then
-        if vehiclePreference == "mixed" then
-            vType = (racerIndex % 2 == 0) and "car" or "motorcycle"
-        else
-            vType = vehiclePreference
-        end
+    if not vType or vType == "mixed" then
+        vType = (racerIndex % 2 == 0) and "car" or "motorcycle"
     end
 
-    local model, primaryPart, exhaust = getVehicleModel(vType, color)
+    local model, primaryPart, exhaust = getVehicleModel(vType, color, racerIndex)
 
-    model:SetPrimaryPartCFrame(spawnCFrame)
+    model:PivotTo(spawnCFrame)
+    if primaryPart then
+        primaryPart.CFrame = spawnCFrame
+    end
 
     local bg = Instance.new("BodyGyro")
     bg.MaxTorque = Vector3.new(400000, 400000, 400000)
@@ -896,7 +1131,10 @@ local function changeRacerVehicle(racer, newVehicleType)
 
     -- Buat model kendaraan baru
     local newModel, newPrimary, newExhaust = getVehicleModel(newVehicleType, racer.color)
-    newModel:SetPrimaryPartCFrame(oldCF)
+    newModel:PivotTo(oldCF)
+    if newPrimary then
+        newPrimary.CFrame = oldCF
+    end
     newModel.Parent = workspace
 
     local bg = Instance.new("BodyGyro")
@@ -1432,6 +1670,7 @@ local function setupPlayerHUD(player)
                 
                 if r.primaryPart then
                     local pCF = getStartingGridCFrame(rIdx)
+                    if r.model then r.model:PivotTo(pCF) end
                     r.primaryPart.CFrame = pCF
                     if r.bg then r.bg.CFrame = pCF end
                     if r.bv then r.bv.Velocity = Vector3.new(0, 0, 0) end
@@ -1661,6 +1900,7 @@ local function pollServer()
                                 
                                 if r.primaryPart then
                                     local pCF = getStartingGridCFrame(rIdx)
+                                    if r.model then r.model:PivotTo(pCF) end
                                     r.primaryPart.CFrame = pCF
                                     if r.bg then r.bg.CFrame = pCF end
                                     if r.bv then r.bv.Velocity = Vector3.new(0, 0, 0) end
