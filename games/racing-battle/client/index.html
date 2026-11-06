@@ -184,6 +184,7 @@
         <button class="btn btn-amber" onclick="simulateRandomGift()">⚡ NITRO</button>
         <button class="btn btn-purple" onclick="simulateObstacle()">🛢️ OIL</button>
         <button class="btn btn-red" onclick="controlGame('clear')">🧹 CLEAR</button>
+        <button id="btn-camera" class="btn btn-blue" style="grid-column: span 3; font-size: 11px; padding: 7px; background: linear-gradient(135deg, #0284c7, #6366f1); border-color: #38bdf8;" onclick="cycleCamera()">🎥 KAMERA: CHASE (FOKUS MOBIL)</button>
       </div>
     </div>
   </div>
@@ -258,6 +259,33 @@
       setTimeout(() => item.remove(), 4000);
     }
     window.showActionToast = showActionToast;
+
+    function cycleCamera() {
+      if (window.toggleCameraMode) {
+        const nextMode = window.toggleCameraMode();
+        const btn = document.getElementById("btn-camera");
+        if (btn) {
+          if (nextMode === "CHASE") {
+            btn.innerText = "🎥 KAMERA: CHASE (FOKUS MOBIL)";
+            btn.style.background = "linear-gradient(135deg, #0284c7, #6366f1)";
+          } else if (nextMode === "TRACK") {
+            btn.innerText = "🎥 KAMERA: TRACK (FOLLOW 2D)";
+            btn.style.background = "linear-gradient(135deg, #059669, #0284c7)";
+          } else {
+            btn.innerText = "🎥 KAMERA: OVERVIEW (TRACK LUAS)";
+            btn.style.background = "linear-gradient(135deg, #334155, #475569)";
+          }
+        }
+        showActionToast("🎥", `Mode Kamera: ${nextMode}`, "#00f0ff");
+      }
+    }
+    window.cycleCamera = cycleCamera;
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "c" || e.key === "C") {
+        cycleCamera();
+      }
+    });
   </script>
   <script type="module" src="/src/main.ts"></script>
 </body>
