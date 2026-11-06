@@ -11,12 +11,19 @@ class TikInfinityClient {
     ws = null;
     reconnectTimer = null;
     syncTimer = null;
+    pollingStarted = false;
     isConnected = false;
+    processedActionIds = new Set();
+    lastPolledActionId = 0;
     constructor(engine, wsUrl = "ws://127.0.0.1:8000/ws/adapter") {
         this.engine = engine;
         this.wsUrl = wsUrl;
     }
     connect() {
+        if (!this.pollingStarted) {
+            this.startRestPolling();
+            this.pollingStarted = true;
+        }
         if (this.ws) {
             try {
                 this.ws.close();
@@ -60,6 +67,26 @@ class TikInfinityClient {
             this.scheduleReconnect();
         }
     }
+    startRestPolling(pollIntervalMs = 1000) {
+        const httpUrl = this.wsUrl.replace(/^ws/, "http").replace(/\/ws\/adapter$/, "/api/adapter/actions");
+        console.log(`🔄 [TikInfinity Adapter] Mengaktifkan REST Polling Fallback di ${httpUrl}...`);
+        setInterval(async () => {
+            try {
+                const res = await fetch(`${httpUrl}?since_id=${this.lastPolledActionId}`);
+                if (!res.ok)
+                    return;
+                const data = (await res.json());
+                if (data && Array.isArray(data.actions)) {
+                    for (const act of data.actions) {
+                        this.handleUniversalAction(act);
+                    }
+                }
+            }
+            catch (e) {
+                // TikInfinity might not be running or restarting
+            }
+        }, pollIntervalMs);
+    }
     scheduleReconnect() {
         if (this.reconnectTimer)
             clearTimeout(this.reconnectTimer);
@@ -68,6 +95,18 @@ class TikInfinityClient {
         }, 3000);
     }
     handleUniversalAction(payload) {
+        if (payload.id) {
+            if (this.processedActionIds.has(payload.id))
+                return;
+            this.processedActionIds.add(payload.id);
+            if (this.processedActionIds.size > 500) {
+                const arr = Array.from(this.processedActionIds);
+                this.processedActionIds = new Set(arr.slice(arr.length - 250));
+            }
+            if (payload.id > this.lastPolledActionId) {
+                this.lastPolledActionId = payload.id;
+            }
+        }
         const act = payload.action;
         const uid = payload.user_id;
         const nick = payload.nickname;

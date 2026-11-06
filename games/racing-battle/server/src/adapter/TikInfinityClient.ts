@@ -8,7 +8,10 @@ export class TikInfinityClient {
   private ws: WebSocket | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private syncTimer: NodeJS.Timeout | null = null;
+  private pollingStarted: boolean = false;
   private isConnected: boolean = false;
+  private processedActionIds: Set<number> = new Set();
+  private lastPolledActionId: number = 0;
 
   constructor(engine: RaceEngine, wsUrl: string = "ws://127.0.0.1:8000/ws/adapter") {
     this.engine = engine;
@@ -16,6 +19,11 @@ export class TikInfinityClient {
   }
 
   public connect() {
+    if (!this.pollingStarted) {
+      this.startRestPolling();
+      this.pollingStarted = true;
+    }
+
     if (this.ws) {
       try {
         this.ws.close();
@@ -61,6 +69,25 @@ export class TikInfinityClient {
     }
   }
 
+  private startRestPolling(pollIntervalMs: number = 1000) {
+    const httpUrl = this.wsUrl.replace(/^ws/, "http").replace(/\/ws\/adapter$/, "/api/adapter/actions");
+    console.log(`🔄 [TikInfinity Adapter] Mengaktifkan REST Polling Fallback di ${httpUrl}...`);
+    setInterval(async () => {
+      try {
+        const res = await fetch(`${httpUrl}?since_id=${this.lastPolledActionId}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { actions?: UniversalActionPayload[] };
+        if (data && Array.isArray(data.actions)) {
+          for (const act of data.actions) {
+            this.handleUniversalAction(act);
+          }
+        }
+      } catch (e) {
+        // TikInfinity might not be running or restarting
+      }
+    }, pollIntervalMs);
+  }
+
   private scheduleReconnect() {
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = setTimeout(() => {
@@ -69,6 +96,18 @@ export class TikInfinityClient {
   }
 
   private handleUniversalAction(payload: UniversalActionPayload) {
+    if (payload.id) {
+      if (this.processedActionIds.has(payload.id)) return;
+      this.processedActionIds.add(payload.id);
+      if (this.processedActionIds.size > 500) {
+        const arr = Array.from(this.processedActionIds);
+        this.processedActionIds = new Set(arr.slice(arr.length - 250));
+      }
+      if (payload.id > this.lastPolledActionId) {
+        this.lastPolledActionId = payload.id;
+      }
+    }
+
     const act = payload.action;
     const uid = payload.user_id;
     const nick = payload.nickname;

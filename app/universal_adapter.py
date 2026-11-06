@@ -195,7 +195,32 @@ class UniversalGameAdapter:
         logger.info(f"⚡ [Universal Action #{payload['id']}] {act_upper} by {nickname} (x{multiplier})")
         self._notify("universal_action", payload)
         self.broadcast_to_games(payload)
+        self._post_to_local_engine(payload)
         return payload
+
+    def _post_to_local_engine(self, payload: Dict[str, Any]):
+        """Direct zero-latency bridge to local RizLive Racing engine on port 3001."""
+        def _do_post():
+            try:
+                import urllib.request
+                import json
+                data = json.dumps({
+                    "action": payload["action"],
+                    "userId": payload["user_id"],
+                    "nickname": payload["nickname"],
+                    "multiplier": payload.get("multiplier", 1),
+                    "vehicle": payload.get("meta", {}).get("vehicle_choice")
+                }).encode("utf-8")
+                req = urllib.request.Request(
+                    "http://127.0.0.1:3001/api/game/action",
+                    data=data,
+                    headers={"Content-Type": "application/json"}
+                )
+                urllib.request.urlopen(req, timeout=0.5)
+            except Exception:
+                pass
+
+        threading.Thread(target=_do_post, daemon=True).start()
 
     def handle_tiktok_comment(self, user_id: str, nickname: str, avatar: str, comment: str) -> Optional[Dict[str, Any]]:
         """Parse TikTok Live comment and map to universal game action."""
@@ -203,6 +228,24 @@ class UniversalGameAdapter:
             return None
 
         t = comment.strip().lower()
+
+        # Check if "ikut" or "join" or "balap" is in the comment
+        if "ikut" in t or "join" in t or t == "balap":
+            words = t.split()
+            v_choice = None
+            for w in words:
+                if w in ["ferrari", "lambo", "lamborghini", "bugatti", "motor", "motorcycle", "kart", "cyber"]:
+                    v_choice = w
+                    break
+            return self.dispatch_action(
+                action="JOIN_RACE",
+                user_id=user_id,
+                nickname=nickname,
+                avatar=avatar,
+                multiplier=1,
+                meta={"source": "comment", "raw_text": comment, "vehicle_choice": v_choice},
+            )
+
         # Direct matched comment commands
         for cmd, act in self.comment_mappings.items():
             if t == cmd or t.startswith(cmd + " "):
@@ -301,10 +344,17 @@ class UniversalGameAdapter:
 
     def update_game_state(self, new_state: Dict[str, Any]) -> Dict[str, Any]:
         """Authoritative game server pushes updated game state and leaderboard."""
+        state_changed = False
         with self._lock:
+            old_s = self.game_state.get("state")
+            old_p = self.game_state.get("active_participants", 0)
             self.game_state.update(new_state)
             self.game_state["last_updated"] = time.time()
-        self._notify("game_state_update", self.game_state)
+            if self.game_state.get("state") != old_s or self.game_state.get("active_participants") != old_p:
+                state_changed = True
+
+        if state_changed:
+            self._notify("game_state_update", self.game_state)
         return {"status": "ok", "state": self.game_state["state"]}
 
     def register_client(self, websocket: WebSocket):
@@ -327,7 +377,7 @@ class UniversalGameAdapter:
             dead_clients = set()
             for ws in list(self.connected_clients):
                 try:
-                    await ws.send_text(msg)
+                    await asyncio.wait_for(ws.send_text(msg), timeout=0.5)
                 except Exception:
                     dead_clients.add(ws)
             for ws in dead_clients:

@@ -36,13 +36,16 @@ active_websockets: List[WebSocket] = []
 
 
 async def broadcast_ws(message: dict):
-    """Send JSON message to all connected dashboard and OBS websockets."""
+    """Send JSON message to all connected dashboard and OBS websockets with timeout protection."""
     for ws in list(active_websockets):
         try:
-            await ws.send_json(message)
+            await asyncio.wait_for(ws.send_json(message), timeout=0.5)
         except Exception:
             if ws in active_websockets:
-                active_websockets.remove(ws)
+                try:
+                    active_websockets.remove(ws)
+                except ValueError:
+                    pass
 
 
 def safe_schedule(coro):
