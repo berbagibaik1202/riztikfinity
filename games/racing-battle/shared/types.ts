@@ -137,3 +137,4 @@ export interface RaceSessionRecord {
   totalParticipants: number;
   summaryJson: string;
 }
+

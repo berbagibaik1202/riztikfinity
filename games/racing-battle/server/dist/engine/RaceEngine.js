@@ -116,6 +116,7 @@ class RaceEngine {
         if (this.state === "IDLE") {
             this.state = "WAITING";
         }
+        console.log(`🏎️ [RaceEngine] Racer bergabung: ${participant.nickname} (${participant.vehicleType}) - Total di Grid: ${this.participants.size}`);
         return participant;
     }
     startRaceCountdown() {

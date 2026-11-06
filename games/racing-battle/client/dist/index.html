@@ -176,7 +176,7 @@
       document.getElementById("hud-toggle-icon").innerText = hud.classList.contains("minimized") ? "🔼" : "🔽";
     }
 
-    const API_URL = "http://" + (window.location.hostname || "localhost") + ":3001/api/game";
+    const API_URL = "/api/game";
 
     async function controlGame(action) {
       try {
@@ -190,14 +190,14 @@
       }
     }
 
-    const sampleRacers = ["Rizky_Speed", "Nabila_GT", "Budi_Turbo", "Siti_Chiron", "Aldi_Drift", "Chibi_Racer"];
+    const sampleRacers = ["Rizky_Speed", "Nabila_GT", "Budi_Turbo", "Siti_Chiron", "Aldi_Drift", "Chibi_Racer", "Sultan_Live", "Garang_GT"];
     async function simulateAction(action) {
-      const rName = sampleRacers[Math.floor(Math.random() * sampleRacers.length)] + "_" + Math.floor(Math.random() * 89 + 10);
+      const rName = sampleRacers[Math.floor(Math.random() * sampleRacers.length)] + "_" + Math.floor(Math.random() * 899 + 100);
       try {
-        await fetch(`${API_URL}/simulate`, {
+        await fetch(`${API_URL}/action`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: action, nickname: rName })
+          body: JSON.stringify({ action: action, nickname: rName, userId: "user_" + rName.toLowerCase() })
         });
       } catch (err) {
         console.error("Simulate error:", err);
@@ -242,3 +242,4 @@
   </script>
 </body>
 </html>
+

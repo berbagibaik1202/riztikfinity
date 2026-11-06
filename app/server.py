@@ -650,7 +650,8 @@ async def get_roblox_script(script_name: str):
 # UNIVERSAL GAME ADAPTER API & WEBSOCKET
 # ==========================================
 class UniversalDispatchRequest(BaseModel):
-    action: str  # e.g. "JOIN_RACE", "NITRO", "ACCELERATE", "SHIELD", etc.
+    action: Optional[str] = None
+    action_type: Optional[str] = None
     user_id: Optional[str] = None
     nickname: Optional[str] = None
     avatar: Optional[str] = ""
@@ -672,8 +673,10 @@ async def get_adapter_status():
             "enabled": universal_adapter.enabled,
             "protocol_version": universal_adapter.protocol_version,
             "connected_games": len(universal_adapter.connected_clients),
+            "connected_clients": len(universal_adapter.connected_clients),
             "game_state": universal_adapter.game_state,
             "queue_count": len(universal_adapter.action_queue),
+            "queue_size": len(universal_adapter.action_queue),
         }
     )
 
@@ -688,10 +691,13 @@ async def get_adapter_actions(since_id: int = 0):
 @app.post("/api/adapter/dispatch")
 async def post_adapter_dispatch(req: UniversalDispatchRequest):
     """Manually dispatch a universal action (used by test simulator & dashboard)."""
+    act = req.action or req.action_type
+    if not act:
+        raise HTTPException(status_code=400, detail="Action is required ('action' or 'action_type')")
     uname = req.nickname or "Tester_Racer"
     uid = req.user_id or uname.lower()
     res = universal_adapter.dispatch_action(
-        action=req.action,
+        action=act,
         user_id=uid,
         nickname=uname,
         avatar=req.avatar or "",
@@ -702,7 +708,7 @@ async def post_adapter_dispatch(req: UniversalDispatchRequest):
         raise HTTPException(status_code=400, detail="Invalid action or adapter disabled")
     await queue_mgr.broadcast_log(
         "INFO",
-        f"🎮 [Adapter Dispatch] {req.action.upper()} untuk {uname} (x{req.multiplier or 1})",
+        f"🎮 [Adapter Dispatch] {act.upper()} untuk {uname} (x{req.multiplier or 1})",
     )
     return JSONResponse(content={"status": "ok", "action": res})
 

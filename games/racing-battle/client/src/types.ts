@@ -72,3 +72,4 @@ export interface GameTickState {
   leaderboard: LeaderboardEntry[];
   winner: LeaderboardEntry | null;
 }
+

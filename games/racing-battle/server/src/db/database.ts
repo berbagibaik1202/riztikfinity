@@ -126,3 +126,4 @@ export class GameDatabase {
     return stmt.all(limit);
   }
 }
+

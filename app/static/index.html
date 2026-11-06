@@ -1665,13 +1665,25 @@
 
     async function dispatchUniversalAction(actionType) {
       const racerInput = document.getElementById('test-html5-racer');
-      const racerName = (racerInput ? racerInput.value.trim() : "") || "Sultan_Live";
+      let racerName = (racerInput ? racerInput.value.trim() : "") || "Sultan_Live";
+
+      // Jika JOIN_RACE, jika pakai nama default atau berturut-turut, buat nama unik agar mobil bertambah terus
+      if (actionType === "JOIN_RACE") {
+        const randId = Math.floor(Math.random() * 899 + 100);
+        if (racerName.startsWith("Sultan_Live") || racerName.startsWith("Pembalap_")) {
+          racerName = "Pembalap_" + randId;
+          if (racerInput) racerInput.value = racerName;
+        }
+      }
+
+      const cleanUid = "user_" + racerName.toLowerCase().replace(/[^a-z0-9]/g, "_");
       const payload = {
+        action: actionType,
         action_type: actionType,
-        user_id: "user_" + racerName.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+        user_id: cleanUid,
         nickname: racerName,
-        value: 1,
-        source: "creator_dashboard"
+        multiplier: 1,
+        meta: { source: "creator_dashboard" }
       };
 
       try {
@@ -1681,8 +1693,32 @@
           body: JSON.stringify(payload)
         });
         const data = await res.json();
-        console.log("Aksi Universal terkirim:", data);
+        console.log("Aksi Universal terkirim ke TikInfinity:", data);
         await fetchAdapterStatus();
+
+        // Dual-dispatch: Kirim juga langsung ke REST API Game Engine (Port 3001) jika aktif di browser
+        try {
+          await fetch('http://localhost:3001/api/game/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: actionType,
+              userId: cleanUid,
+              nickname: racerName,
+              multiplier: 1
+            })
+          });
+        } catch (e2) {
+          // Port 3001 akan menerima via WebSocket TikInfinity Adapter
+        }
+
+        const feedbackBadge = document.getElementById('adapter-status-text');
+        if (feedbackBadge) {
+          feedbackBadge.innerText = `✅ ${actionType} (${racerName}) terkirim!`;
+          setTimeout(() => {
+            feedbackBadge.innerText = "Siap Menerima Game";
+          }, 2500);
+        }
       } catch (e) {
         console.error("Gagal mengirim aksi universal:", e);
       }

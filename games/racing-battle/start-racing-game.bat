@@ -13,3 +13,4 @@ echo.
 
 node dist/index.js
 pause
+

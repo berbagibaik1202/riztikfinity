@@ -322,22 +322,31 @@ class UniversalGameAdapter:
             return
 
         msg = json.dumps({"type": "action", "data": action_payload})
-        dead_clients = set()
 
-        for ws in self.connected_clients:
+        async def _send_all():
+            dead_clients = set()
+            for ws in list(self.connected_clients):
+                try:
+                    await ws.send_text(msg)
+                except Exception:
+                    dead_clients.add(ws)
+            for ws in dead_clients:
+                self.unregister_client(ws)
+
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(_send_all())
+        except RuntimeError:
             try:
-                # Use loop call
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    asyncio.run_coroutine_threadsafe(ws.send_text(msg), loop)
+                    asyncio.run_coroutine_threadsafe(_send_all(), loop)
                 else:
-                    asyncio.run(ws.send_text(msg))
-            except Exception:
-                dead_clients.add(ws)
-
-        for ws in dead_clients:
-            self.unregister_client(ws)
+                    asyncio.run(_send_all())
+            except Exception as e:
+                logger.error(f"Failed to broadcast to games: {e}")
 
 
 # Global Singleton
 universal_adapter = UniversalGameAdapter()
+
