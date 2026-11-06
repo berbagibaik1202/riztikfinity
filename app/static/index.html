@@ -1665,15 +1665,15 @@
 
     async function dispatchUniversalAction(actionType) {
       const racerInput = document.getElementById('test-html5-racer');
-      let racerName = (racerInput ? racerInput.value.trim() : "") || "Sultan_Live";
+      let baseName = (racerInput ? racerInput.value.trim() : "") || "Pembalap";
 
-      // Jika JOIN_RACE, jika pakai nama default atau berturut-turut, buat nama unik agar mobil bertambah terus
-      if (actionType === "JOIN_RACE") {
+      // Pastikan setiap klik JOIN_RACE SELALU membuat nama & ID baru yang unik agar mobil langsung bertambah di arena
+      let racerName = baseName;
+      if (actionType === "JOIN_RACE" || actionType === "join") {
         const randId = Math.floor(Math.random() * 899 + 100);
-        if (racerName.startsWith("Sultan_Live") || racerName.startsWith("Pembalap_")) {
-          racerName = "Pembalap_" + randId;
-          if (racerInput) racerInput.value = racerName;
-        }
+        const prefix = baseName.replace(/_\d+$/, "") || "Pembalap";
+        racerName = prefix + "_" + randId;
+        if (racerInput) racerInput.value = racerName;
       }
 
       const cleanUid = "user_" + racerName.toLowerCase().replace(/[^a-z0-9]/g, "_");
@@ -1687,6 +1687,7 @@
       };
 
       try {
+        // 1. Kirim ke TikInfinity Python Server (Port 8000)
         const res = await fetch('/api/adapter/dispatch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1696,20 +1697,46 @@
         console.log("Aksi Universal terkirim ke TikInfinity:", data);
         await fetchAdapterStatus();
 
-        // Dual-dispatch: Kirim juga langsung ke REST API Game Engine (Port 3001) jika aktif di browser
-        try {
-          await fetch('http://localhost:3001/api/game/action', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: actionType,
-              userId: cleanUid,
-              nickname: racerName,
-              multiplier: 1
-            })
-          });
-        } catch (e2) {
-          // Port 3001 akan menerima via WebSocket TikInfinity Adapter
+        // 2. Direct Dual-Dispatch ke Game Engine (Port 3001) via localhost & 127.0.0.1
+        const host = window.location.hostname || "localhost";
+        const endpoints = [
+          `http://${host}:3001`,
+          `http://localhost:3001`,
+          `http://127.0.0.1:3001`
+        ];
+
+        for (const base of endpoints) {
+          try {
+            // Kontrol start / reset balapan langsung ke /api/game/control
+            if (actionType === "START_RACE" || actionType === "start") {
+              await fetch(`${base}/api/game/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "start", totalLaps: 3 })
+              });
+            } else if (actionType === "RESET_RACE" || actionType === "reset") {
+              await fetch(`${base}/api/game/control`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: "reset", totalLaps: 3 })
+              });
+            }
+
+            // Aksi mobil (JOIN, NITRO, SHIELD, dsb.) ke /api/game/action
+            await fetch(`${base}/api/game/action`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: actionType,
+                userId: cleanUid,
+                nickname: racerName,
+                multiplier: 1
+              })
+            });
+            break; // Berhasil terkirim!
+          } catch (e2) {
+            // Coba endpoint fallback berikutnya
+          }
         }
 
         const feedbackBadge = document.getElementById('adapter-status-text');

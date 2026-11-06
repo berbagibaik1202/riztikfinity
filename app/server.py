@@ -576,53 +576,92 @@ async def post_roblox_test_action(req: RobloxTestActionRequest):
         res = roblox_race_mgr.join_racer(user_id=uid, nickname=uname)
         v = res.get("racer", {}).get("vehicle", "car")
         v_name = "Mobil" if v == "car" else "Motor"
-        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} masuk balapan Roblox ({v_name}) dari Gift Mawar!")
+        universal_adapter.dispatch_action(
+            action="JOIN_RACE",
+            user_id=uid,
+            nickname=uname,
+            meta={"source": "test_simulator", "vehicle_choice": v}
+        )
+        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} masuk balapan ({v_name}) dari Gift Mawar!")
         return JSONResponse(content=res)
 
     elif req.test_type == "join_chat":
         res = roblox_race_mgr.join_racer(user_id=uid, nickname=uname)
         v = res.get("racer", {}).get("vehicle", "car")
         v_name = "Mobil" if v == "car" else "Motor"
-        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} masuk balapan Roblox ({v_name}) via chat 'ikut'!")
+        universal_adapter.dispatch_action(
+            action="JOIN_RACE",
+            user_id=uid,
+            nickname=uname,
+            meta={"source": "test_simulator", "vehicle_choice": v}
+        )
+        await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} masuk balapan ({v_name}) via chat 'ikut'!")
         return JSONResponse(content=res)
 
     elif req.test_type == "boost_1x":
         res = roblox_race_mgr.boost_racer(user_id=uid, nickname=uname, multiplier=1)
+        universal_adapter.dispatch_action(
+            action="ACCELERATE",
+            user_id=uid,
+            nickname=uname,
+            multiplier=1,
+        )
         await queue_mgr.broadcast_log("INFO", f"⚡ [TEST] {uname} percepat 1x via Mawar 1!")
         return JSONResponse(content=res)
 
     elif req.test_type == "boost_5x":
         res = roblox_race_mgr.boost_racer(user_id=uid, nickname=uname, multiplier=5)
+        universal_adapter.dispatch_action(
+            action="ACCELERATE",
+            user_id=uid,
+            nickname=uname,
+            multiplier=5,
+        )
         await queue_mgr.broadcast_log("INFO", f"⚡ [TEST] {uname} percepat 5x via Mawar 5!")
         return JSONResponse(content=res)
 
     elif req.test_type == "turbo_donut":
         res = roblox_race_mgr.boost_racer(user_id=uid, nickname=uname, multiplier=8, turbo=True)
+        universal_adapter.dispatch_action(
+            action="NITRO",
+            user_id=uid,
+            nickname=uname,
+            multiplier=8,
+        )
         await queue_mgr.broadcast_log("INFO", f"🍩 [TEST] {uname} TURBO DONUT diaktifkan!")
         return JSONResponse(content=res)
 
     elif req.test_type == "rocket_topi":
         res = roblox_race_mgr.fire_rocket(user_id=uid, nickname=uname)
+        universal_adapter.dispatch_action(
+            action="SPAWN_OBSTACLE",
+            user_id=uid,
+            nickname=uname,
+        )
         await queue_mgr.broadcast_log("INFO", f"🚀 [TEST] {uname} menembakkan ROKET TOPI!")
         return JSONResponse(content=res)
 
     elif req.test_type == "change_ferrari":
         res = roblox_race_mgr.change_vehicle(user_id=uid, nickname=uname, vehicle="ferrari")
+        universal_adapter.dispatch_action(action="JOIN_RACE", user_id=uid, nickname=uname, meta={"vehicle_choice": "supercar"})
         await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} mengganti kendaraan ke FERRARI!")
         return JSONResponse(content=res)
 
     elif req.test_type == "change_lambo":
         res = roblox_race_mgr.change_vehicle(user_id=uid, nickname=uname, vehicle="lamborghini")
+        universal_adapter.dispatch_action(action="JOIN_RACE", user_id=uid, nickname=uname, meta={"vehicle_choice": "supercar"})
         await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} mengganti kendaraan ke LAMBORGHINI!")
         return JSONResponse(content=res)
 
     elif req.test_type == "change_bugatti":
         res = roblox_race_mgr.change_vehicle(user_id=uid, nickname=uname, vehicle="bugatti")
+        universal_adapter.dispatch_action(action="JOIN_RACE", user_id=uid, nickname=uname, meta={"vehicle_choice": "supercar"})
         await queue_mgr.broadcast_log("INFO", f"🏎️ [TEST] {uname} mengganti kendaraan ke BUGATTI CHIRON!")
         return JSONResponse(content=res)
 
     elif req.test_type == "change_motor":
         res = roblox_race_mgr.change_vehicle(user_id=uid, nickname=uname, vehicle="motorcycle")
+        universal_adapter.dispatch_action(action="JOIN_RACE", user_id=uid, nickname=uname, meta={"vehicle_choice": "motorcycle"})
         await queue_mgr.broadcast_log("INFO", f"🏍️ [TEST] {uname} mengganti kendaraan ke MOTOR!")
         return JSONResponse(content=res)
 

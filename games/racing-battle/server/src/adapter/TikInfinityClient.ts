@@ -121,12 +121,14 @@ export class TikInfinityClient {
       this.onActionCallback(act, uid, nick, mult);
     }
 
-    switch (act) {
+    switch ((act || "").toUpperCase()) {
       case "JOIN_RACE":
+      case "JOIN":
         this.engine.addParticipant(uid, nick, avatar, meta.vehicle_choice);
         break;
 
       case "ACCELERATE":
+      case "GAS":
         if (!this.engine.participants.has(uid.toLowerCase())) {
           this.engine.addParticipant(uid, nick, avatar);
         }
@@ -134,6 +136,7 @@ export class TikInfinityClient {
         break;
 
       case "NITRO":
+      case "TURBO":
         if (!this.engine.participants.has(uid.toLowerCase())) {
           this.engine.addParticipant(uid, nick, avatar, "supercar");
         }
@@ -145,27 +148,38 @@ export class TikInfinityClient {
         break;
 
       case "SPAWN_OBSTACLE":
+      case "OIL":
         this.engine.spawnObstacle(uid, "oil");
         break;
 
       case "TURN_LEFT":
+      case "LEFT":
         this.engine.applySteer(uid, "left");
         break;
 
       case "TURN_RIGHT":
+      case "RIGHT":
         this.engine.applySteer(uid, "right");
         break;
 
       case "SLOW_DOWN":
+      case "REM":
         this.engine.applySlowDown(uid);
         break;
 
       case "START_RACE":
+      case "START":
         this.engine.startRaceCountdown();
         break;
 
       case "RESET_RACE":
+      case "RESET":
         this.engine.resetRace(meta.clear_racers || false);
+        break;
+
+      case "CLEAR":
+      case "CLEAR_RACE":
+        this.engine.resetRace(true);
         break;
 
       default:

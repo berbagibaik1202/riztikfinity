@@ -87,13 +87,14 @@ app.post("/api/game/control", (req, res) => {
     engine.totalLaps = totalLaps;
   }
 
-  if (action === "start") {
+  const act = (action || "").toLowerCase();
+  if (act === "start" || act === "start_race") {
     engine.startRaceCountdown();
-  } else if (action === "reset") {
+  } else if (act === "reset" || act === "reset_race") {
     engine.resetRace(false);
-  } else if (action === "clear") {
+  } else if (act === "clear" || act === "clear_race") {
     engine.resetRace(true);
-  } else if (action === "pause") {
+  } else if (act === "pause") {
     engine.state = engine.state === "PAUSED" ? "RACING" : "PAUSED";
   }
 
@@ -106,16 +107,20 @@ const handleAction = (req: express.Request, res: express.Response) => {
   const name = nickname || `Bot_${Math.floor(Math.random() * 899 + 100)}`;
   const uid = (userId || name).toLowerCase();
   const vType = vehicleType || vehicle;
+  const actNorm = (action || "").toUpperCase();
 
-  switch (action) {
+  switch (actNorm) {
     case "JOIN_RACE":
+    case "JOIN":
       engine.addParticipant(uid, name, "", vType);
       break;
     case "ACCELERATE":
+    case "GAS":
       if (!engine.participants.has(uid)) engine.addParticipant(uid, name, "", vType);
       engine.applyAccelerate(uid, multiplier || 1);
       break;
     case "NITRO":
+    case "TURBO":
       if (!engine.participants.has(uid)) engine.addParticipant(uid, name, "", "supercar");
       engine.applyNitro(uid, multiplier || 8);
       break;
@@ -123,25 +128,35 @@ const handleAction = (req: express.Request, res: express.Response) => {
       engine.applyShield(uid, duration || 5);
       break;
     case "SPAWN_OBSTACLE":
+    case "OIL":
       engine.spawnObstacle(uid, "oil");
       break;
     case "TURN_LEFT":
+    case "LEFT":
       engine.applySteer(uid, "left");
       break;
     case "TURN_RIGHT":
+    case "RIGHT":
       engine.applySteer(uid, "right");
       break;
     case "SLOW_DOWN":
+    case "REM":
       engine.applySlowDown(uid);
       break;
     case "START_RACE":
+    case "START":
       engine.startRaceCountdown();
       break;
     case "RESET_RACE":
+    case "RESET":
       engine.resetRace(false);
       break;
+    case "CLEAR":
+    case "CLEAR_RACE":
+      engine.resetRace(true);
+      break;
     default:
-      return res.status(400).json({ error: "Unknown action" });
+      return res.status(400).json({ error: `Unknown action: ${action}` });
   }
 
   // Broadcast real-time action event to connected Phaser clients for camera spotlight & toasts

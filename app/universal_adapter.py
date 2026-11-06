@@ -99,13 +99,29 @@ class UniversalGameAdapter:
 
         self.comment_mappings: Dict[str, str] = {
             "ikut": "JOIN_RACE",
+            "!ikut": "JOIN_RACE",
+            "join": "JOIN_RACE",
             "!join": "JOIN_RACE",
+            "masuk": "JOIN_RACE",
+            "!masuk": "JOIN_RACE",
+            "balap": "JOIN_RACE",
+            "!balap": "JOIN_RACE",
+            "start": "START_RACE",
+            "!start": "START_RACE",
+            "mulai": "START_RACE",
+            "!mulai": "START_RACE",
+            "gas": "ACCELERATE",
             "!gas": "ACCELERATE",
+            "nitro": "NITRO",
             "!nitro": "NITRO",
+            "turbo": "NITRO",
+            "!turbo": "NITRO",
+            "shield": "SHIELD",
             "!shield": "SHIELD",
-            "!kiri": "TURN_LEFT",
-            "!kanan": "TURN_RIGHT",
+            "rem": "SLOW_DOWN",
             "!rem": "SLOW_DOWN",
+            "reset": "RESET_RACE",
+            "!reset": "RESET_RACE",
         }
 
         # Registered listeners
@@ -201,24 +217,56 @@ class UniversalGameAdapter:
     def _post_to_local_engine(self, payload: Dict[str, Any]):
         """Direct zero-latency bridge to local RizLive Racing engine on port 3001."""
         def _do_post():
-            try:
-                import urllib.request
-                import json
-                data = json.dumps({
-                    "action": payload["action"],
-                    "userId": payload["user_id"],
-                    "nickname": payload["nickname"],
-                    "multiplier": payload.get("multiplier", 1),
-                    "vehicle": payload.get("meta", {}).get("vehicle_choice")
-                }).encode("utf-8")
-                req = urllib.request.Request(
-                    "http://127.0.0.1:3001/api/game/action",
-                    data=data,
-                    headers={"Content-Type": "application/json"}
-                )
-                urllib.request.urlopen(req, timeout=0.5)
-            except Exception:
-                pass
+            import urllib.request
+            import json
+
+            act = str(payload.get("action", "")).upper()
+
+            # If action is START_RACE / START, call both /api/game/control and /api/game/action
+            if act in ["START_RACE", "START"]:
+                ctrl_data = json.dumps({"action": "start", "totalLaps": 3}).encode("utf-8")
+                for host in ["127.0.0.1:3001", "localhost:3001"]:
+                    try:
+                        req = urllib.request.Request(
+                            f"http://{host}/api/game/control",
+                            data=ctrl_data,
+                            headers={"Content-Type": "application/json"}
+                        )
+                        urllib.request.urlopen(req, timeout=0.5)
+                    except Exception:
+                        pass
+
+            if act in ["RESET_RACE", "RESET"]:
+                ctrl_data = json.dumps({"action": "reset", "totalLaps": 3}).encode("utf-8")
+                for host in ["127.0.0.1:3001", "localhost:3001"]:
+                    try:
+                        req = urllib.request.Request(
+                            f"http://{host}/api/game/control",
+                            data=ctrl_data,
+                            headers={"Content-Type": "application/json"}
+                        )
+                        urllib.request.urlopen(req, timeout=0.5)
+                    except Exception:
+                        pass
+
+            data = json.dumps({
+                "action": act,
+                "userId": payload["user_id"],
+                "nickname": payload["nickname"],
+                "multiplier": payload.get("multiplier", 1),
+                "vehicle": payload.get("meta", {}).get("vehicle_choice")
+            }).encode("utf-8")
+
+            for host in ["127.0.0.1:3001", "localhost:3001"]:
+                try:
+                    req = urllib.request.Request(
+                        f"http://{host}/api/game/action",
+                        data=data,
+                        headers={"Content-Type": "application/json"}
+                    )
+                    urllib.request.urlopen(req, timeout=0.5)
+                except Exception:
+                    pass
 
         threading.Thread(target=_do_post, daemon=True).start()
 
