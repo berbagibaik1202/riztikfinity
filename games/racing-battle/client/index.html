@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RizLive Racing Battle — Live TikTok Game</title>
+  <title>RizLive Racing Battle — Cyberpunk Live Racing</title>
+
+  <!-- High-Tech Racing Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:ital,wght@0,700;0,900;1,700;1,900&family=Rajdhani:ital,wght@0,600;0,700;1,700;1,900&family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
+
   <style>
     * {
       box-sizing: border-box;
@@ -13,9 +19,9 @@
     }
 
     body {
-      background-color: #090d16;
+      background-color: #070913;
       color: #f8fafc;
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
       overflow: hidden;
       display: flex;
       justify-content: center;
@@ -31,6 +37,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      background: radial-gradient(circle at center, #0f1225 0%, #060812 100%);
     }
 
     canvas {
@@ -38,30 +45,31 @@
       max-width: 100%;
       max-height: 100%;
       object-fit: contain;
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 80px rgba(0, 0, 0, 0.9);
     }
 
-    /* HOST CONTROL PANEL (POJOK KANAN BAWAH) */
+    /* HOST CONTROL PANEL (POJOK KIRI BAWAH SAMPING LEADERBOARD) */
     #host-hud {
       position: absolute;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(15, 23, 42, 0.85);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      bottom: 24px;
+      left: 335px;
+      background: rgba(10, 15, 30, 0.88);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0, 240, 255, 0.25);
       border-radius: 12px;
-      padding: 12px 16px;
+      padding: 10px 14px;
       z-index: 100;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(0, 240, 255, 0.15);
       display: flex;
       flex-direction: column;
       gap: 8px;
-      transition: all 0.3s ease;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     #host-hud.minimized {
-      transform: translateY(calc(100% - 40px));
-      opacity: 0.85;
+      transform: translateY(calc(100% - 38px));
+      opacity: 0.8;
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
     .hud-header {
@@ -69,58 +77,65 @@
       justify-content: space-between;
       align-items: center;
       font-weight: 700;
-      font-size: 13px;
-      letter-spacing: 0.5px;
-      color: #94a3b8;
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: #38bdf8;
       cursor: pointer;
+      text-transform: uppercase;
+      font-family: 'Orbitron', sans-serif;
     }
 
     .hud-buttons {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
     }
 
     .btn {
-      padding: 8px 12px;
+      padding: 6px 10px;
       border-radius: 6px;
-      border: none;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       font-weight: 700;
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
       transition: all 0.15s ease;
       color: white;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .btn:hover {
       transform: translateY(-1px);
-      filter: brightness(1.1);
+      filter: brightness(1.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     }
 
     .btn:active {
       transform: translateY(1px);
     }
 
-    .btn-green { background: #10b981; }
-    .btn-slate { background: #475569; }
-    .btn-blue  { background: #3b82f6; }
-    .btn-red   { background: #e11d48; }
-    .btn-amber { background: #f59e0b; }
-    .btn-purple{ background: #8b5cf6; }
+    .btn-green { background: linear-gradient(135deg, #059669, #10b981); border-color: #34d399; }
+    .btn-slate { background: linear-gradient(135deg, #1e293b, #334155); }
+    .btn-blue  { background: linear-gradient(135deg, #0284c7, #0ea5e9); border-color: #38bdf8; }
+    .btn-red   { background: linear-gradient(135deg, #be123c, #e11d48); }
+    .btn-amber { background: linear-gradient(135deg, #d97706, #f59e0b); border-color: #fbbf24; }
+    .btn-purple{ background: linear-gradient(135deg, #6d28d9, #8b5cf6); border-color: #a78bfa; }
 
-    /* ACTION EVENT TOAST NOTIFICATIONS */
+    /* ACTION EVENT TOAST NOTIFICATIONS (TOP CENTER) */
     #action-feed {
       position: absolute;
-      top: 20px;
-      left: 20px;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 8px;
-      z-index: 90;
+      z-index: 150;
       pointer-events: none;
     }
 
@@ -128,22 +143,27 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      background: rgba(15, 23, 42, 0.9);
-      border-left: 4px solid #10b981;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-size: 13px;
+      background: rgba(10, 15, 30, 0.92);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      border-left: 4px solid #00f0ff;
+      border-radius: 8px;
+      padding: 8px 18px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #f8fafc;
       animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1), fadeOut 0.4s ease 3.6s forwards;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 240, 255, 0.2);
     }
 
     @keyframes slideIn {
-      from { transform: translateX(-40px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
+      from { transform: translateY(-30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
     }
 
     @keyframes fadeOut {
-      to { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 0; transform: translateY(-15px); }
     }
   </style>
 </head>
@@ -154,16 +174,16 @@
     <!-- HOST CONTROLS & TEST SIMULATOR -->
     <div id="host-hud">
       <div class="hud-header" onclick="toggleHUD()">
-        <span>🎮 RIZLIVE CREATOR PANEL</span>
+        <span>🕹️ STREAMER CONTROLS</span>
         <span id="hud-toggle-icon">🔽</span>
       </div>
       <div class="hud-buttons">
-        <button class="btn btn-green" onclick="controlGame('start')">▶️ MULAI BALAP</button>
-        <button class="btn btn-slate" onclick="controlGame('reset')">🔄 RESET GRID</button>
-        <button class="btn btn-blue" onclick="simulateAction('JOIN_RACE')">➕ TAMBAH RACER</button>
-        <button class="btn btn-amber" onclick="simulateRandomGift()">🎁 GIFT NITRO</button>
-        <button class="btn btn-purple" onclick="simulateObstacle()">🛢️ DROP OIL</button>
-        <button class="btn btn-red" onclick="controlGame('clear')">🧹 HAPUS SEMUA</button>
+        <button class="btn btn-green" onclick="controlGame('start')">▶️ START</button>
+        <button class="btn btn-slate" onclick="controlGame('reset')">🔄 RESET</button>
+        <button class="btn btn-blue" onclick="simulateAction('JOIN_RACE')">➕ RACER</button>
+        <button class="btn btn-amber" onclick="simulateRandomGift()">⚡ NITRO</button>
+        <button class="btn btn-purple" onclick="simulateObstacle()">🛢️ OIL</button>
+        <button class="btn btn-red" onclick="controlGame('clear')">🧹 CLEAR</button>
       </div>
     </div>
   </div>
@@ -189,7 +209,7 @@
       }
     }
 
-    const sampleRacers = ["Rizky_Speed", "Nabila_GT", "Budi_Turbo", "Siti_Chiron", "Aldi_Drift", "Chibi_Racer", "Sultan_Live", "Garang_GT"];
+    const sampleRacers = ["FLASH", "NITRO", "SHOCK", "BLAZE", "GHOST", "FURY", "SULTAN", "TURBO"];
     async function simulateAction(action) {
       const rName = sampleRacers[Math.floor(Math.random() * sampleRacers.length)] + "_" + Math.floor(Math.random() * 899 + 100);
       try {
@@ -227,7 +247,7 @@
       }
     }
 
-    function showActionToast(icon, text, color = "#10b981") {
+    function showActionToast(icon, text, color = "#00f0ff") {
       const feed = document.getElementById("action-feed");
       if (!feed) return;
       const item = document.createElement("div");
@@ -242,4 +262,3 @@
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
-
