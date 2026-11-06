@@ -144,11 +144,59 @@ def test_roblox_race():
     assert os.path.exists("roblox/README.md")
     print("  [OK] Roblox Luau scripts and documentation confirmed present.")
 
+
+def test_universal_adapter():
+    print("\nTesting Universal Game Adapter Protocol...")
+    from app.universal_adapter import universal_adapter
+
+    caps = universal_adapter.get_capabilities()
+    assert caps["protocol_version"] == "1.0.0"
+    assert "JOIN_RACE" in caps["supported_actions"]
+    assert "NITRO" in caps["supported_actions"]
+    assert "ACCELERATE" in caps["supported_actions"]
+    assert "SPAWN_OBSTACLE" in caps["supported_actions"]
+    assert "SHIELD" in caps["supported_actions"]
+    print("  [OK] Protocol version and capabilities validated.")
+
+    # Test comment parsing
+    a1 = universal_adapter.handle_tiktok_comment("u_1", "RacerOne", "", "ikut")
+    assert a1 is not None
+    assert a1["action"] == "JOIN_RACE"
+    assert a1["nickname"] == "RacerOne"
+
+    a2 = universal_adapter.handle_tiktok_comment("u_2", "RacerTwo", "", "!ferrari")
+    assert a2 is not None
+    assert a2["action"] == "JOIN_RACE"
+    assert a2["meta"]["vehicle_choice"] == "ferrari"
+
+    # Test gift parsing
+    g1 = universal_adapter.handle_tiktok_gift("u_1", "RacerOne", "", "Rose", combo=5)
+    assert g1 is not None
+    assert g1["action"] == "ACCELERATE"
+    assert g1["multiplier"] == 5
+
+    g2 = universal_adapter.handle_tiktok_gift("u_2", "RacerTwo", "", "Doughnut", combo=1)
+    assert g2 is not None
+    assert g2["action"] == "NITRO"
+    assert g2["multiplier"] == 8
+
+    # Test state update
+    st = universal_adapter.update_game_state({"state": "RACING", "active_participants": 2})
+    assert st["state"] == "RACING"
+    assert universal_adapter.game_state["active_participants"] == 2
+
+    # Test action poll
+    polled = universal_adapter.poll_actions(since_id=0)
+    assert len(polled) >= 4
+    print(f"  [OK] Universal action dispatcher, mapping, and polling confirmed ({len(polled)} actions).")
+
+
 if __name__ == "__main__":
     test_direct_input()
     test_config()
     test_static_and_routes()
     test_profiles()
     test_roblox_race()
+    test_universal_adapter()
     print("\nAll core tests passed successfully!")
 

@@ -24,6 +24,7 @@ from TikTokLive.events import (
 from app.config import AppConfig, TriggerType
 from app.queue_manager import QueueManager
 from app.roblox_race import roblox_race_mgr
+from app.universal_adapter import universal_adapter
 
 logger = logging.getLogger("tiktok_client")
 
@@ -256,6 +257,15 @@ class TikTokManager:
                             f"🏎️ {user_name} bergabung ke Balapan Roblox ({vehicle_name}) via chat 'ikut'!",
                         )
 
+            # Forward to Universal Game Adapter (RizLive Racing Battle & Web Engines)
+            if universal_adapter.enabled:
+                universal_adapter.handle_tiktok_comment(
+                    user_id=unique_id,
+                    nickname=user_name,
+                    avatar=avatar_url,
+                    comment=text,
+                )
+
             # Match controller rules for game
             for rule in self.config.rules:
                 if not rule.enabled or rule.trigger_type != TriggerType.CHAT:
@@ -348,6 +358,17 @@ class TikTokManager:
                         f"🌟 {user_name} MENG-UPGRADE KENDARAAN JADI HYPERCAR {target_v.upper()}!",
                     )
 
+            # Forward to Universal Game Adapter (RizLive Racing Battle & Web Engines)
+            if universal_adapter.enabled:
+                universal_adapter.handle_tiktok_gift(
+                    user_id=unique_id,
+                    nickname=user_name,
+                    avatar=avatar_url,
+                    gift_name=gift_name,
+                    combo=combo,
+                    repeat_end=repeat_end,
+                )
+
             # Match controller rules for game
             for rule in self.config.rules:
                 if not rule.enabled or rule.trigger_type != TriggerType.GIFT:
@@ -379,6 +400,15 @@ class TikTokManager:
                     "count": count,
                 },
             )
+
+            # Forward to Universal Game Adapter
+            if universal_adapter.enabled:
+                universal_adapter.handle_tiktok_like(
+                    user_id=unique_id,
+                    nickname=user_name,
+                    avatar="",
+                    count=count,
+                )
 
             like_rules = [r for r in self.config.rules if r.enabled and r.trigger_type == TriggerType.LIKE]
             if not like_rules:

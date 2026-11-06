@@ -61,6 +61,12 @@
         <span class="text-[10px] text-rose-400">↗</span>
       </a>
 
+      <!-- RizLive Racing Web Game Shortcut Link -->
+      <a href="http://localhost:3001" target="_blank" class="px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-800/80 text-emerald-300 font-semibold hover:bg-emerald-900 transition flex items-center gap-1.5" title="Buka Game Web Balapan HTML5 (Port 3001 / OBS Browser Source)">
+        <span>🏁 RizLive Racing Web</span>
+        <span class="text-[10px] text-emerald-400">↗</span>
+      </a>
+
       <!-- Admin Status -->
       <span id="badge-admin" class="px-2.5 py-1 rounded-md bg-slate-800 border border-slate-700 flex items-center gap-1.5 font-medium">
         <span class="w-2 h-2 rounded-full bg-amber-400"></span> Checking Admin...
@@ -501,6 +507,90 @@
             </button>
             <button onclick="testRobloxAction('change_motor')" class="bg-cyan-950/70 hover:bg-cyan-900/80 py-1.5 px-2 rounded-xl text-[11px] font-bold text-cyan-300 border border-cyan-800 transition flex items-center justify-center gap-1">
               <span>🏍️</span> Ganti Motor (!motor)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIZLIVE RACING BATTLE (HTML5 2D WEB RACING GAME) -->
+      <div id="html5-race-card" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="text-2xl">🏁</span>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-bold text-slate-100 uppercase tracking-wider">
+                  RizLive Racing Battle (HTML5 Phaser)
+                </h2>
+                <span id="adapter-conn-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 font-bold border border-emerald-800">
+                  Universal Adapter v1.0.0
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">Game Balap Web 2D standalone terintegrasi TikTok Live (Socket.IO + SQLite). Cocok untuk OBS Browser Source 1920x1080.</p>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="flex items-center gap-2 text-xs">
+            <a href="http://localhost:3001" target="_blank" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white transition flex items-center gap-1.5 shadow">
+              <span>🚀</span> Buka Game (Port 3001)
+            </a>
+            <button onclick="copyObsRacingUrl()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold border border-slate-700 transition flex items-center gap-1">
+              <span>📋</span> Copy Link OBS
+            </button>
+          </div>
+        </div>
+
+        <!-- Adapter Stats Bar -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/80 p-3.5 rounded-xl border border-slate-800/80 text-xs">
+          <div>
+            <span class="text-slate-500 block text-[11px]">Status Adapter:</span>
+            <span id="adapter-status-text" class="font-bold text-emerald-400">Siap Menerima Game</span>
+          </div>
+          <div>
+            <span class="text-slate-500 block text-[11px]">Klien Terhubung:</span>
+            <span id="adapter-clients-count" class="font-mono font-bold text-cyan-400">0 game engine</span>
+          </div>
+          <div>
+            <span class="text-slate-500 block text-[11px]">Antrean Aksi:</span>
+            <span id="adapter-queue-count" class="font-mono font-bold text-amber-400">0 aksi</span>
+          </div>
+          <div>
+            <span class="text-slate-500 block text-[11px]">Server Game:</span>
+            <a href="http://localhost:3001" target="_blank" class="font-mono font-bold text-indigo-400 hover:underline">http://localhost:3001</a>
+          </div>
+        </div>
+
+        <!-- Simulator & Test Aksi Balap HTML5 -->
+        <div class="p-4 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-3">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🧪</span> Simulator Universal Action (Kirim Langsung ke Game HTML5):
+            </span>
+            <div class="flex items-center gap-2">
+              <input type="text" id="test-html5-racer" placeholder="Nama Pembalap (cth: Sultan_Live)" value="Sultan_Live" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-cyan-500 w-36">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+            <button onclick="dispatchUniversalAction('JOIN_RACE')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-emerald-300 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>🏁</span> JOIN_RACE
+            </button>
+            <button onclick="dispatchUniversalAction('NITRO')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-amber-300 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>🔥</span> NITRO
+            </button>
+            <button onclick="dispatchUniversalAction('SHIELD')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-cyan-300 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>🛡️</span> SHIELD
+            </button>
+            <button onclick="dispatchUniversalAction('SPAWN_OBSTACLE')" class="bg-slate-800 hover:bg-slate-700 py-1.5 px-2 rounded-xl text-[11px] font-bold text-orange-300 border border-slate-700 transition flex items-center justify-center gap-1">
+              <span>🛢️</span> DROP OIL
+            </button>
+            <button onclick="dispatchUniversalAction('START_RACE')" class="bg-emerald-950/70 hover:bg-emerald-900/80 py-1.5 px-2 rounded-xl text-[11px] font-bold text-emerald-400 border border-emerald-800 transition flex items-center justify-center gap-1">
+              <span>🟢</span> START
+            </button>
+            <button onclick="dispatchUniversalAction('RESET_RACE')" class="bg-rose-950/70 hover:bg-rose-900/80 py-1.5 px-2 rounded-xl text-[11px] font-bold text-rose-400 border border-rose-800 transition flex items-center justify-center gap-1">
+              <span>🔄</span> RESET
             </button>
           </div>
         </div>
@@ -1559,6 +1649,72 @@
         alert("Gagal menyalin script: " + e);
       }
     }
+
+    // ==========================================
+    // RIZLIVE RACING BATTLE (HTML5 ADAPTER)
+    // ==========================================
+    async function copyObsRacingUrl() {
+      const url = "http://localhost:3001";
+      try {
+        await navigator.clipboard.writeText(url);
+        alert("✅ URL Game Balap HTML5 berhasil disalin:\n\n" + url + "\n\nTempel (Paste) di OBS Studio -> Tambah Browser Source -> Lebar: 1920, Tinggi: 1080.");
+      } catch (e) {
+        prompt("Salin URL ini ke OBS Browser Source:", url);
+      }
+    }
+
+    async function dispatchUniversalAction(actionType) {
+      const racerInput = document.getElementById('test-html5-racer');
+      const racerName = (racerInput ? racerInput.value.trim() : "") || "Sultan_Live";
+      const payload = {
+        action_type: actionType,
+        user_id: "user_" + racerName.toLowerCase().replace(/[^a-z0-9]/g, "_"),
+        nickname: racerName,
+        value: 1,
+        source: "creator_dashboard"
+      };
+
+      try {
+        const res = await fetch('/api/adapter/dispatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        console.log("Aksi Universal terkirim:", data);
+        await fetchAdapterStatus();
+      } catch (e) {
+        console.error("Gagal mengirim aksi universal:", e);
+      }
+    }
+
+    async function fetchAdapterStatus() {
+      try {
+        const res = await fetch('/api/adapter/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        const clientEl = document.getElementById('adapter-clients-count');
+        const queueEl = document.getElementById('adapter-queue-count');
+        const badgeEl = document.getElementById('adapter-conn-badge');
+        if (clientEl) clientEl.innerText = `${data.connected_clients || 0} game engine`;
+        if (queueEl) queueEl.innerText = `${data.queue_size || 0} aksi`;
+        if (badgeEl) {
+          if (data.connected_clients > 0) {
+            badgeEl.className = "text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 font-bold border border-emerald-800";
+            badgeEl.innerText = `Terhubung (${data.connected_clients})`;
+          } else {
+            badgeEl.className = "text-[10px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-400 font-bold border border-amber-800";
+            badgeEl.innerText = `Menunggu Game Engine`;
+          }
+        }
+      } catch (e) {
+        // silent
+      }
+    }
+
+    // Polling adapter status periodically
+    setInterval(fetchAdapterStatus, 3000);
+    setTimeout(fetchAdapterStatus, 1000);
   </script>
 </body>
 </html>

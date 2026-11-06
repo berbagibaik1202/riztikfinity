@@ -17,6 +17,7 @@ from app.profile_manager import GameProfile, profile_mgr
 from app.queue_manager import QueueManager
 from app.roblox_race import roblox_race_mgr
 from app.tiktok_client import ConnectionState, TikTokManager
+from app.universal_adapter import universal_adapter
 
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(STATIC_DIR, exist_ok=True)
@@ -79,6 +80,15 @@ roblox_race_mgr.add_listener(
     lambda event_type, data: safe_schedule(
         broadcast_ws({
             "type": "roblox_race",
+            "event": event_type,
+            "data": data,
+        })
+    )
+)
+universal_adapter.add_listener(
+    lambda event_type, data: safe_schedule(
+        broadcast_ws({
+            "type": "universal_adapter",
             "event": event_type,
             "data": data,
         })
@@ -636,6 +646,104 @@ async def get_roblox_script(script_name: str):
     raise HTTPException(status_code=404, detail="File missing")
 
 
+# ==========================================
+# UNIVERSAL GAME ADAPTER API & WEBSOCKET
+# ==========================================
+class UniversalDispatchRequest(BaseModel):
+    action: str  # e.g. "JOIN_RACE", "NITRO", "ACCELERATE", "SHIELD", etc.
+    user_id: Optional[str] = None
+    nickname: Optional[str] = None
+    avatar: Optional[str] = ""
+    multiplier: Optional[int] = 1
+    meta: Optional[Dict[str, Any]] = None
+
+
+@app.get("/api/adapter/capabilities")
+async def get_adapter_capabilities():
+    """Capabilities discovery for connected game engines."""
+    return JSONResponse(content=universal_adapter.get_capabilities())
+
+
+@app.get("/api/adapter/status")
+async def get_adapter_status():
+    """Status endpoint for Creator Dashboard & monitors."""
+    return JSONResponse(
+        content={
+            "enabled": universal_adapter.enabled,
+            "protocol_version": universal_adapter.protocol_version,
+            "connected_games": len(universal_adapter.connected_clients),
+            "game_state": universal_adapter.game_state,
+            "queue_count": len(universal_adapter.action_queue),
+        }
+    )
+
+
+@app.get("/api/adapter/actions")
+async def get_adapter_actions(since_id: int = 0):
+    """Polled by REST-based external game engines."""
+    actions = universal_adapter.poll_actions(since_id=since_id)
+    return JSONResponse(content={"status": "ok", "actions": actions})
+
+
+@app.post("/api/adapter/dispatch")
+async def post_adapter_dispatch(req: UniversalDispatchRequest):
+    """Manually dispatch a universal action (used by test simulator & dashboard)."""
+    uname = req.nickname or "Tester_Racer"
+    uid = req.user_id or uname.lower()
+    res = universal_adapter.dispatch_action(
+        action=req.action,
+        user_id=uid,
+        nickname=uname,
+        avatar=req.avatar or "",
+        multiplier=req.multiplier or 1,
+        meta=req.meta or {"source": "manual_dispatch"},
+    )
+    if not res:
+        raise HTTPException(status_code=400, detail="Invalid action or adapter disabled")
+    await queue_mgr.broadcast_log(
+        "INFO",
+        f"🎮 [Adapter Dispatch] {req.action.upper()} untuk {uname} (x{req.multiplier or 1})",
+    )
+    return JSONResponse(content={"status": "ok", "action": res})
+
+
+@app.post("/api/adapter/state")
+async def post_adapter_state(data: dict):
+    """External game server syncs authoritative state & leaderboard back."""
+    res = universal_adapter.update_game_state(data)
+    return JSONResponse(content=res)
+
+
+@app.websocket("/ws/adapter")
+async def adapter_websocket_endpoint(websocket: WebSocket):
+    """Dedicated realtime WebSocket stream for external game engines."""
+    await websocket.accept()
+    universal_adapter.register_client(websocket)
+    try:
+        # Send initial greeting with protocol version & current state
+        await websocket.send_json({
+            "type": "init",
+            "protocol": universal_adapter.protocol_version,
+            "capabilities": universal_adapter.get_capabilities(),
+            "game_state": universal_adapter.game_state,
+        })
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                msg = json.loads(raw)
+                mtype = msg.get("type")
+                if mtype == "state_update":
+                    universal_adapter.update_game_state(msg.get("data", {}))
+                elif mtype == "ping":
+                    await websocket.send_json({"type": "pong", "timestamp": time.time()})
+            except Exception:
+                pass
+    except WebSocketDisconnect:
+        universal_adapter.unregister_client(websocket)
+    except Exception:
+        universal_adapter.unregister_client(websocket)
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -660,6 +768,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 "overlay_like_hearts": config.overlay_like_hearts,
             },
             "roblox_race": roblox_race_mgr.get_summary(),
+            "universal_adapter": universal_adapter.get_capabilities(),
         },
     })
     try:
