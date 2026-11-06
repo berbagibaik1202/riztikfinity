@@ -166,7 +166,7 @@
       to { opacity: 0; transform: translateY(-15px); }
     }
   </style>
-  <script type="module" crossorigin src="/assets/index-CAMI8y9T.js"></script>
+  <script type="module" crossorigin src="/assets/index-B4FxhKVQ.js"></script>
 </head>
 <body>
   <div id="game-container">
@@ -226,11 +226,23 @@
     }
 
     async function simulateRandomGift() {
+      let targetNick = sampleRacers[Math.floor(Math.random() * sampleRacers.length)];
+      let targetId = "user_" + targetNick.toLowerCase();
+      try {
+        const stateRes = await fetch(`${API_URL}/state`);
+        const stateData = await stateRes.json();
+        if (stateData && stateData.leaderboard && stateData.leaderboard.length > 0) {
+          const randomRacer = stateData.leaderboard[Math.floor(Math.random() * stateData.leaderboard.length)];
+          targetNick = randomRacer.nickname;
+          targetId = randomRacer.userId;
+        }
+      } catch (e) {}
+
       try {
         await fetch(`${API_URL}/simulate`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "NITRO", nickname: sampleRacers[0], multiplier: 8 })
+          body: JSON.stringify({ action: "NITRO", nickname: targetNick, userId: targetId, multiplier: 8 })
         });
       } catch (err) {
         console.error("Simulate gift error:", err);
@@ -285,6 +297,8 @@
     window.addEventListener("keydown", (e) => {
       if (e.key === "c" || e.key === "C") {
         cycleCamera();
+      } else if (e.key === "g" || e.key === "G") {
+        simulateRandomGift();
       }
     });
   </script>

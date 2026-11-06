@@ -35,6 +35,11 @@ const db = new GameDatabase();
 const engine = new RaceEngine(track, db);
 const tikInfinity = new TikInfinityClient(engine, process.env.TIKTOK_ADAPTER_WS || "ws://127.0.0.1:8000/ws/adapter");
 
+// Broadcast action events (Gifts, Nitro, Boosts) to all clients for dynamic camera spotlight
+tikInfinity.onActionCallback = (action, userId, nickname, multiplier) => {
+  io.emit("action_event", { action, userId, nickname, multiplier });
+};
+
 // Broadcast 30 FPS ticks to all connected Phaser clients / OBS overlays
 engine.setTickCallback((tickData) => {
   io.emit("game_tick", tickData);
@@ -138,6 +143,9 @@ const handleAction = (req: express.Request, res: express.Response) => {
     default:
       return res.status(400).json({ error: "Unknown action" });
   }
+
+  // Broadcast real-time action event to connected Phaser clients for camera spotlight & toasts
+  io.emit("action_event", { action, userId: uid, nickname: name, multiplier: multiplier || 1 });
 
   res.json({ success: true, status: "ok", action, racer: name });
 };

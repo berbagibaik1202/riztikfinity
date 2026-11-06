@@ -15,6 +15,7 @@ class TikInfinityClient {
     isConnected = false;
     processedActionIds = new Set();
     lastPolledActionId = 0;
+    onActionCallback;
     constructor(engine, wsUrl = "ws://127.0.0.1:8000/ws/adapter") {
         this.engine = engine;
         this.wsUrl = wsUrl;
@@ -114,6 +115,9 @@ class TikInfinityClient {
         const mult = payload.multiplier || 1;
         const meta = payload.meta || {};
         console.log(`⚡ [Universal Action Recv] ${act} from ${nick} (x${mult})`);
+        if (this.onActionCallback) {
+            this.onActionCallback(act, uid, nick, mult);
+        }
         switch (act) {
             case "JOIN_RACE":
                 this.engine.addParticipant(uid, nick, avatar, meta.vehicle_choice);

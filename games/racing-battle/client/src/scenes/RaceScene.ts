@@ -3,6 +3,7 @@ import { io, Socket } from "socket.io-client";
 import { TrackData, Participant, Obstacle, GameTickState, LeaderboardEntry } from "../types";
 
 export type CameraMode = "CHASE" | "TRACK" | "OVERVIEW";
+export type SpotlightAngle = "FRONT" | "REAR";
 
 export class RaceScene extends Phaser.Scene {
   private socket!: Socket;
@@ -19,6 +20,14 @@ export class RaceScene extends Phaser.Scene {
   private camFocusY: number = 880;
   private camAngle: number = 0;
   private camCurrentZoom: number = 1.85;
+
+  // Alternating Gift Camera Spotlight State
+  private giftSpotlightUserId: string | null = null;
+  private giftSpotlightAngle: SpotlightAngle = "REAR";
+  private giftSpotlightTimer: number = 0;
+  private nextGiftAngleToggle: SpotlightAngle = "FRONT"; // Alternates between FRONT and REAR
+  private spotlightRacerName: string = "";
+  private prevNitroStates: Map<string, boolean> = new Map();
 
   // Graphics Pipelines in Game World
   private bgGraphics!: Phaser.GameObjects.Graphics;
@@ -44,6 +53,11 @@ export class RaceScene extends Phaser.Scene {
   private countdownText!: Phaser.GameObjects.Text;
   private winnerBanner!: Phaser.GameObjects.Container;
   private winnerText!: Phaser.GameObjects.Text;
+
+  // Cinematic Gift Spotlight Banner
+  private spotlightBanner!: Phaser.GameObjects.Container;
+  private spotlightBannerText!: Phaser.GameObjects.Text;
+  private spotlightAngleBadge!: Phaser.GameObjects.Text;
 
   // Leaderboard Row Containers
   private leaderboardContainer!: Phaser.GameObjects.Container;
@@ -129,13 +143,16 @@ export class RaceScene extends Phaser.Scene {
     // 8. Create Top-Right HUD (Rank & Speedometer Gauge)
     this.createTopRightHUD();
 
-    // 9. Create Countdown Banner & Winner Celebration
+    // 9. Create Countdown Banner, Winner Celebration, and Gift Spotlight Banner
     this.createAnnouncementOverlays();
 
     // 10. Expose Camera Switching Controls to window for Streamer HUD & Keyboard
     (window as any).toggleCameraMode = () => this.toggleCameraMode();
     (window as any).setCameraMode = (m: CameraMode) => this.setCameraMode(m);
     (window as any).getCameraMode = () => this.cameraMode;
+    (window as any).triggerGiftSpotlight = (userId: string, nickname: string, angle?: SpotlightAngle) => {
+      this.triggerGiftSpotlight(userId, nickname, "NITRO", angle);
+    };
 
     // 11. Socket.IO Connection to Authoritative Game Server
     const serverHost = window.location.hostname || "localhost";
@@ -150,8 +167,20 @@ export class RaceScene extends Phaser.Scene {
       this.handleGameTick(tick);
     });
 
+    // Listen for Action Events (Gifts, Nitro, Boosts from TikTok / Dashboard)
+    this.socket.on("action_event", (event: { action: string; userId: string; nickname: string; multiplier?: number }) => {
+      if (
+        event.action === "NITRO" ||
+        event.action === "ACCELERATE" ||
+        event.action === "SHIELD" ||
+        event.action === "SPAWN_OBSTACLE"
+      ) {
+        this.triggerGiftSpotlight(event.userId, event.nickname, event.action);
+      }
+    });
+
     this.socket.on("connect", () => {
-      console.log("🎮 [Phaser Client] Connected to Authoritative Server with Dynamic Vehicle Camera!");
+      console.log("🎮 [Phaser Client] Connected to Authoritative Server with Alternating Gift Camera!");
     });
   }
 
@@ -168,6 +197,54 @@ export class RaceScene extends Phaser.Scene {
 
   public setCameraMode(mode: CameraMode) {
     this.cameraMode = mode;
+  }
+
+  /**
+   * Triggers the Alternating Front/Rear Camera Spotlight on a gifting racer
+   */
+  public triggerGiftSpotlight(
+    userId: string,
+    nickname: string,
+    giftType: string = "NITRO",
+    forcedAngle?: SpotlightAngle
+  ) {
+    const uid = userId.toLowerCase();
+    this.giftSpotlightUserId = uid;
+    this.spotlightRacerName = nickname;
+
+    // Alternate angle: FRONT -> REAR -> FRONT -> REAR...
+    if (forcedAngle) {
+      this.giftSpotlightAngle = forcedAngle;
+    } else {
+      this.giftSpotlightAngle = this.nextGiftAngleToggle;
+      this.nextGiftAngleToggle = this.nextGiftAngleToggle === "FRONT" ? "REAR" : "FRONT";
+    }
+
+    this.giftSpotlightTimer = 4.5; // 4.5 seconds showcase
+
+    // Update Spotlight Top Banner
+    const isFront = this.giftSpotlightAngle === "FRONT";
+    const spotBg = this.spotlightBanner.getByName("spotBg") as Phaser.GameObjects.Rectangle;
+    if (spotBg) {
+      spotBg.setStrokeStyle(2.5, isFront ? 0xfacc15 : 0x00f0ff, 1);
+    }
+    this.spotlightBannerText.setText(`🎬 GIFT SPOTLIGHT: ${nickname.toUpperCase()}`);
+    this.spotlightAngleBadge.setText(isFront ? "🎥 KAMERA DEPAN" : "🏎️ KAMERA BELAKANG");
+    this.spotlightAngleBadge.setBackgroundColor(isFront ? "#facc15" : "#00f0ff");
+    this.spotlightAngleBadge.setColor(isFront ? "#000000" : "#050b1a");
+    this.spotlightBanner.setVisible(true);
+    this.spotlightBanner.setAlpha(1);
+
+    // Trigger toast in HTML HUD if available
+    if ((window as any).showActionToast) {
+      const icon = isFront ? "🎥" : "🏎️";
+      const angleLabel = isFront ? "KAMERA DEPAN" : "KAMERA BELAKANG";
+      (window as any).showActionToast(
+        icon,
+        `GIFT! ${nickname} [${angleLabel}]`,
+        isFront ? "#facc15" : "#00f0ff"
+      );
+    }
   }
 
   // =========================================================================
@@ -204,13 +281,9 @@ export class RaceScene extends Phaser.Scene {
 
     // Distant Neon City Skyline Silhouettes with Glowing Windows surrounding track
     const skylineGroups = [
-      // Top skyline (y: -100 to 180)
       { startX: -200, count: 20, baseY: 160, maxH: 260, stepX: 130 },
-      // Bottom skyline (y: 960 to 1250)
       { startX: -100, count: 18, baseY: 1040, maxH: 240, stepX: 140 },
-      // Left skyline (x: -500 to 80)
       { startX: -600, count: 6, baseY: 550, maxH: 320, stepX: 120 },
-      // Right skyline (x: 1800 to 2400)
       { startX: 1840, count: 8, baseY: 600, maxH: 300, stepX: 130 },
     ];
 
@@ -230,7 +303,7 @@ export class RaceScene extends Phaser.Scene {
         for (let wy = by + 20; wy < by + bh - 20; wy += 28) {
           for (let wx = bx + 12; wx < bx + bw - 12; wx += 22) {
             if (((i * 7 + wx + wy) % 5) < 3) {
-              const winColor = ((i + wx) % 2 === 0) ? 0x00f0ff : 0xfacc15;
+              const winColor = (i + wx) % 2 === 0 ? 0x00f0ff : 0xfacc15;
               g.fillStyle(winColor, 0.45);
               g.fillRect(wx, wy, 7, 12);
             }
@@ -249,15 +322,12 @@ export class RaceScene extends Phaser.Scene {
     ];
 
     for (const fl of floodlights) {
-      // Tower Pole
       g.lineStyle(4, 0x334155, 1.0);
       g.lineBetween(fl.x, fl.y, fl.x, fl.y - 45);
 
-      // Light Head
       g.fillStyle(0xfacc15, 1.0);
       g.fillCircle(fl.x, fl.y - 45, 6);
 
-      // Angled Light Cone shining towards track
       g.fillStyle(0xfef08a, 0.08);
       const tipX = fl.x;
       const tipY = fl.y - 45;
@@ -286,7 +356,6 @@ export class RaceScene extends Phaser.Scene {
       { x: 180, y: 220 },
       { x: 90, y: 440 },
       { x: 110, y: 680 },
-      // Inner island palms
       { x: 500, y: 720 },
       { x: 740, y: 730 },
       { x: 1040, y: 720 },
@@ -302,7 +371,6 @@ export class RaceScene extends Phaser.Scene {
   }
 
   private drawNeonPalmTree(g: Phaser.GameObjects.Graphics, x: number, y: number) {
-    // Curved Trunk
     g.lineStyle(4, 0x1e1b4b, 0.85);
     const trunkCurve = new Phaser.Curves.QuadraticBezier(
       new Phaser.Math.Vector2(x, y + 42),
@@ -311,7 +379,6 @@ export class RaceScene extends Phaser.Scene {
     );
     g.strokePoints(trunkCurve.getPoints(8));
 
-    // Glowing Neon Fronds (Alternating Cyan & Magenta)
     const fronds = [
       { dx: -38, dy: -26, c: 0x00f0ff },
       { dx: 38, dy: -26, c: 0xff007f },
@@ -350,7 +417,6 @@ export class RaceScene extends Phaser.Scene {
     g.lineStyle(roadWidth + 48, 0x0f172a, 0.95);
     this.strokeClosedCurve(g, pts);
 
-    // Neon Aura Tubing (Magenta & Cyan rim)
     g.lineStyle(roadWidth + 34, 0xff007f, 0.4);
     this.strokeClosedCurve(g, pts);
     g.lineStyle(roadWidth + 24, 0x00f0ff, 0.5);
@@ -363,11 +429,10 @@ export class RaceScene extends Phaser.Scene {
     g.lineStyle(roadWidth, 0x182032, 1.0);
     this.strokeClosedCurve(g, pts);
 
-    // Subtle inner glossy tarmac highlight
     g.lineStyle(roadWidth - 28, 0x1e293b, 0.65);
     this.strokeClosedCurve(g, pts);
 
-    // 3. SEGMENTED RUMBLE KERBS (Alternating Red & White racing curbs)
+    // 3. SEGMENTED RUMBLE KERBS
     this.drawRumbleKerbs(kg, pts, roadWidth);
 
     // 4. NEON TURNING CHEVRON ARROWS (>>>) on corner apexes
@@ -442,18 +507,15 @@ export class RaceScene extends Phaser.Scene {
       const nx = -Math.sin(heading);
       const ny = Math.cos(heading);
 
-      // Place glowing chevron board on the outer wall
       const wallDist = 88;
       const cx = p.x + nx * wallDist;
       const cy = p.y + ny * wallDist;
 
-      // Dark backing sign plate
       cg.fillStyle(0x0f172a, 0.92);
       cg.fillRoundedRect(cx - 36, cy - 14, 72, 28, 4);
       cg.lineStyle(1.5, 0xfacc15, 0.9);
       cg.strokeRoundedRect(cx - 36, cy - 14, 72, 28, 4);
 
-      // Triple Glowing Amber Chevrons (>>>)
       cg.lineStyle(3, 0xfacc15, 1.0);
       const chevronOffsets = [-16, 0, 16];
       for (const off of chevronOffsets) {
@@ -509,21 +571,18 @@ export class RaceScene extends Phaser.Scene {
     const ny = Math.cos(angle);
     const halfW = roadWidth * 0.5;
 
-    // White base line
     g.lineStyle(16, 0xffffff, 1.0);
     g.beginPath();
     g.moveTo(p0.x - nx * halfW, p0.y - ny * halfW);
     g.lineTo(p0.x + nx * halfW, p0.y + ny * halfW);
     g.strokePath();
 
-    // Black checkers overlay
     g.lineStyle(10, 0x090d16, 1.0);
     g.beginPath();
     g.moveTo(p0.x - nx * halfW, p0.y - ny * halfW);
     g.lineTo(p0.x + nx * halfW, p0.y + ny * halfW);
     g.strokePath();
 
-    // Start Arch Neon Laser Beam (Cyan)
     g.lineStyle(4, 0x00f0ff, 0.95);
     g.beginPath();
     g.moveTo(p0.x - nx * (halfW + 18), p0.y - ny * (halfW + 18));
@@ -536,7 +595,6 @@ export class RaceScene extends Phaser.Scene {
   // =========================================================================
 
   private createTopLeftHUD() {
-    // 1. LAP Header & Value
     this.lapHeader = this.add.text(42, 28, "LAP", {
       fontFamily: "'Orbitron', 'Rajdhani', sans-serif",
       fontSize: "16px",
@@ -553,7 +611,6 @@ export class RaceScene extends Phaser.Scene {
       strokeThickness: 3,
     });
 
-    // 2. TIME Header & Value
     this.timeHeader = this.add.text(42, 114, "TIME", {
       fontFamily: "'Orbitron', 'Rajdhani', sans-serif",
       fontSize: "14px",
@@ -574,20 +631,16 @@ export class RaceScene extends Phaser.Scene {
   private createLeaderboardHUD() {
     this.leaderboardContainer = this.add.container(40, 190);
 
-    // Up to 6 racer cards as seen in the reference image
     for (let i = 0; i < 6; i++) {
       const y = i * 44;
 
-      // Card Background (frosted dark glassmorphism)
       const bg = this.add.rectangle(0, y, 260, 38, 0x0a1024, 0.85);
       bg.setOrigin(0, 0);
       bg.setStrokeStyle(1.5, 0x1e293b, 0.9);
 
-      // Rank Badge Box
       const badgeBg = this.add.rectangle(6, y + 5, 26, 28, 0x1e293b, 1.0);
       badgeBg.setOrigin(0, 0);
 
-      // Rank Number Text
       const badgeText = this.add.text(19, y + 19, `${i + 1}`, {
         fontFamily: "'Orbitron', sans-serif",
         fontSize: "15px",
@@ -595,7 +648,6 @@ export class RaceScene extends Phaser.Scene {
         color: "#ffffff",
       }).setOrigin(0.5);
 
-      // Nickname
       const nameText = this.add.text(42, y + 19, "", {
         fontFamily: "'Rajdhani', 'Segoe UI', sans-serif",
         fontSize: "16px",
@@ -603,7 +655,6 @@ export class RaceScene extends Phaser.Scene {
         color: "#ffffff",
       }).setOrigin(0, 0.5);
 
-      // Gap Time / Status
       const gapText = this.add.text(250, y + 19, "", {
         fontFamily: "'Orbitron', monospace",
         fontSize: "14px",
@@ -619,7 +670,6 @@ export class RaceScene extends Phaser.Scene {
   }
 
   private createTopRightHUD() {
-    // 1. Giant Metallic Rank Display (e.g. 1ST, 2ND)
     this.rankBigText = this.add.text(1740, 48, "1ST", {
       fontFamily: "'Orbitron', 'Impact', sans-serif",
       fontSize: "64px",
@@ -629,7 +679,6 @@ export class RaceScene extends Phaser.Scene {
       strokeThickness: 8,
     }).setOrigin(1, 0);
 
-    // 2. Speedometer Numbers (e.g. 268 KM/H)
     this.speedValueText = this.add.text(1880, 52, "0", {
       fontFamily: "'Orbitron', sans-serif",
       fontSize: "50px",
@@ -648,7 +697,7 @@ export class RaceScene extends Phaser.Scene {
   }
 
   private createAnnouncementOverlays() {
-    // Countdown Display
+    // 1. Countdown Display
     this.countdownText = this.add.text(960, 480, "", {
       fontFamily: "'Orbitron', 'Impact', sans-serif",
       fontSize: "140px",
@@ -658,7 +707,7 @@ export class RaceScene extends Phaser.Scene {
       strokeThickness: 18,
     }).setOrigin(0.5).setVisible(false);
 
-    // Winner Banner Modal
+    // 2. Winner Banner Modal
     this.winnerBanner = this.add.container(960, 500).setVisible(false);
 
     const bannerBg = this.add.rectangle(0, 0, 780, 240, 0x090e1f, 0.95);
@@ -675,7 +724,33 @@ export class RaceScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.winnerBanner.add([bannerBg, this.winnerText]);
-    this.hudLayer.add([this.countdownText, this.winnerBanner]);
+
+    // 3. Cinematic Gift Spotlight Top Banner (Alternating Front / Rear)
+    this.spotlightBanner = this.add.container(960, 72).setVisible(false);
+
+    const spotBg = this.add.rectangle(0, 0, 560, 48, 0x070c1e, 0.92);
+    spotBg.setName("spotBg");
+    spotBg.setStrokeStyle(2.5, 0xfacc15, 1.0);
+
+    this.spotlightBannerText = this.add.text(-40, 0, "🎬 GIFT SPOTLIGHT: PEMBALAP", {
+      fontFamily: "'Orbitron', 'Rajdhani', sans-serif",
+      fontSize: "17px",
+      fontStyle: "bold",
+      color: "#ffffff",
+    }).setOrigin(0.5);
+
+    this.spotlightAngleBadge = this.add.text(190, 0, "🎥 KAMERA DEPAN", {
+      fontFamily: "'Orbitron', sans-serif",
+      fontSize: "12px",
+      fontStyle: "bold",
+      color: "#000000",
+      backgroundColor: "#facc15",
+      padding: { x: 8, y: 4 },
+    }).setOrigin(0.5);
+
+    this.spotlightBanner.add([spotBg, this.spotlightBannerText, this.spotlightAngleBadge]);
+
+    this.hudLayer.add([this.countdownText, this.winnerBanner, this.spotlightBanner]);
   }
 
   // =========================================================================
@@ -690,9 +765,16 @@ export class RaceScene extends Phaser.Scene {
     this.obstacles = tick.obstacles;
     this.winner = tick.winner;
 
-    // Update participants map
+    // Update participants map & detect newly activated nitro/gifts as fallback
     for (const p of tick.participants) {
       this.participants.set(p.userId, p);
+
+      const wasNitro = this.prevNitroStates.get(p.userId) || false;
+      if (p.nitroActive && !wasNitro) {
+        // Participant just received a gift or activated nitro!
+        this.triggerGiftSpotlight(p.userId, p.nickname, "NITRO");
+      }
+      this.prevNitroStates.set(p.userId, p.nitroActive);
     }
 
     // Countdown Banner Handling
@@ -750,7 +832,7 @@ export class RaceScene extends Phaser.Scene {
       this.raceElapsedTime = 0;
     }
 
-    // 1. Dynamic Camera Follow & Zoom on Vehicles
+    // 1. Dynamic Camera Follow & Alternating Gift Spotlight
     this.updateCamera(delta);
 
     // 2. Render Dynamic World Objects & Vehicles
@@ -763,23 +845,43 @@ export class RaceScene extends Phaser.Scene {
   }
 
   // =========================================================================
-  // DYNAMIC CAMERA CONTROLLER (FOCUS ON VEHICLES)
+  // DYNAMIC CAMERA CONTROLLER (ALTERNATING FRONT/REAR GIFT SPOTLIGHT)
   // =========================================================================
 
   private updateCamera(delta: number) {
     const cam = this.cameras.main;
     const dt = Math.min(delta * 0.001, 0.1);
 
-    // Identify target focus racer (1st place leader, or first racer)
-    let focusParticipant: Participant | null = null;
-    if (this.leaderboard.length > 0) {
-      focusParticipant = this.participants.get(this.leaderboard[0].userId) || null;
+    // Update gift spotlight timer
+    if (this.giftSpotlightTimer > 0) {
+      this.giftSpotlightTimer -= dt;
+      if (this.giftSpotlightTimer <= 0) {
+        this.giftSpotlightUserId = null;
+        this.tweens.add({
+          targets: this.spotlightBanner,
+          alpha: 0,
+          duration: 400,
+          onComplete: () => {
+            this.spotlightBanner.setVisible(false);
+          },
+        });
+      }
     }
-    if (!focusParticipant && this.participants.size > 0) {
+
+    // Identify target focus racer (Gift spotlight racer, or 1st place leader)
+    let focusParticipant: Participant | null = null;
+    let isGiftSpotlight = false;
+
+    if (this.giftSpotlightUserId && this.participants.has(this.giftSpotlightUserId)) {
+      focusParticipant = this.participants.get(this.giftSpotlightUserId)!;
+      isGiftSpotlight = true;
+    } else if (this.leaderboard.length > 0) {
+      focusParticipant = this.participants.get(this.leaderboard[0].userId) || null;
+    } else if (this.participants.size > 0) {
       focusParticipant = this.participants.values().next().value || null;
     }
 
-    if (this.cameraMode === "OVERVIEW") {
+    if (this.cameraMode === "OVERVIEW" && !isGiftSpotlight) {
       // Zoom out to see entire circuit overview
       this.camCurrentZoom += (1.0 - this.camCurrentZoom) * (dt * 3.5);
       this.camFocusX += (960 - this.camFocusX) * (dt * 3.5);
@@ -792,28 +894,78 @@ export class RaceScene extends Phaser.Scene {
       return;
     }
 
-    // Vehicle Focused Modes: "CHASE" or "TRACK"
+    // Vehicle Focused Modes: "CHASE" or "TRACK" (or Active Gift Spotlight)
     if (focusParticipant) {
       const p = focusParticipant;
       const targetSpeed = p.speed || 240;
 
-      // Dynamic zoom: 1.85x default close-up, dynamic kick to 1.70x during high-speed nitro
-      const targetZoom = p.nitroActive ? 1.70 : (this.cameraMode === "CHASE" ? 1.85 : 1.78);
+      if (isGiftSpotlight) {
+        // ===================================================================
+        // GIFT SPOTLIGHT: ALTERNATING FRONT / REAR CINEMATIC CAMERA
+        // ===================================================================
+        const isFront = this.giftSpotlightAngle === "FRONT";
+
+        if (isFront) {
+          // 🎥 KAMERA DEPAN (FRONT CINEMATIC HEAD-ON VIEW):
+          // Kamera berada di depan mobil, menghadap ke belakang ke arah moncong mobil!
+          // Mobil melaju ke arah bawah/penonton dengan strip balap ganda & lampu depan menyala.
+          const lookaheadDist = -115;
+          const lookX = p.x + Math.cos(p.angle) * lookaheadDist;
+          const lookY = p.y + Math.sin(p.angle) * lookaheadDist;
+
+          const posLerp = Math.min(1.0, dt * 8.5);
+          this.camFocusX += (lookX - this.camFocusX) * posLerp;
+          this.camFocusY += (lookY - this.camFocusY) * posLerp;
+
+          // Rotasi 180° berlawanan dengan rear chase sehingga mobil mengarah ke kamera
+          const desiredCamRot = -(p.angle + Math.PI / 2);
+          let diff = desiredCamRot - this.camAngle;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          this.camAngle += diff * Math.min(1.0, dt * 6.0);
+
+          // Close-up cinematic zoom
+          this.camCurrentZoom += (2.1 - this.camCurrentZoom) * (dt * 4.0);
+        } else {
+          // 🏎️ KAMERA BELAKANG (REAR CHASE VIEW):
+          // Kamera berada di belakang mobil menghadap ke depan.
+          // Semburan api ganda nitro & knalpot terlihat melesat ke atas lintasan.
+          const lookaheadDist = 145 + (targetSpeed > 300 ? 45 : 0);
+          const lookX = p.x + Math.cos(p.angle) * lookaheadDist;
+          const lookY = p.y + Math.sin(p.angle) * lookaheadDist;
+
+          const posLerp = Math.min(1.0, dt * 8.0);
+          this.camFocusX += (lookX - this.camFocusX) * posLerp;
+          this.camFocusY += (lookY - this.camFocusY) * posLerp;
+
+          const desiredCamRot = -(p.angle - Math.PI / 2);
+          let diff = desiredCamRot - this.camAngle;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          this.camAngle += diff * Math.min(1.0, dt * 5.0);
+
+          this.camCurrentZoom += (1.85 - this.camCurrentZoom) * (dt * 4.0);
+        }
+
+        cam.setZoom(this.camCurrentZoom);
+        cam.centerOn(this.camFocusX, this.camFocusY);
+        cam.setRotation(this.camAngle);
+        return;
+      }
+
+      // Standard Leader Follow (When no active gift spotlight)
+      const targetZoom = p.nitroActive ? 1.70 : this.cameraMode === "CHASE" ? 1.85 : 1.78;
       this.camCurrentZoom += (targetZoom - this.camCurrentZoom) * (dt * 3.0);
 
       if (this.cameraMode === "CHASE") {
-        // High-octane arcade chase camera:
-        // Positions camera so car is in the lower-center portion and road curves ahead
         const lookaheadDist = 135 + (targetSpeed > 300 ? 55 : 0);
         const lookX = p.x + Math.cos(p.angle) * lookaheadDist;
         const lookY = p.y + Math.sin(p.angle) * lookaheadDist;
 
-        // Smooth position catch-up (lerp)
         const posLerp = Math.min(1.0, dt * 7.0);
         this.camFocusX += (lookX - this.camFocusX) * posLerp;
         this.camFocusY += (lookY - this.camFocusY) * posLerp;
 
-        // Smooth banking rotation so car is oriented forward/upward on screen
         const desiredCamRot = -(p.angle - Math.PI / 2);
         let diff = desiredCamRot - this.camAngle;
         while (diff < -Math.PI) diff += Math.PI * 2;
@@ -824,7 +976,6 @@ export class RaceScene extends Phaser.Scene {
         cam.centerOn(this.camFocusX, this.camFocusY);
         cam.setRotation(this.camAngle);
       } else {
-        // "TRACK" Mode: Focused tightly on car with 0° upright orientation
         const lookaheadDist = 80;
         const lookX = p.x + Math.cos(p.angle) * lookaheadDist;
         const lookY = p.y + Math.sin(p.angle) * lookaheadDist;
@@ -833,7 +984,6 @@ export class RaceScene extends Phaser.Scene {
         this.camFocusX += (lookX - this.camFocusX) * posLerp;
         this.camFocusY += (lookY - this.camFocusY) * posLerp;
 
-        // Smoothly return rotation to 0
         this.camAngle += (0 - this.camAngle) * (dt * 5.0);
 
         cam.setZoom(this.camCurrentZoom);
@@ -856,7 +1006,7 @@ export class RaceScene extends Phaser.Scene {
   }
 
   // =========================================================================
-  // CAR GRAPHICS RENDERING (WITH RACING STRIPES, UNDERGLOW, HEADLIGHTS, NITRO)
+  // CAR GRAPHICS RENDERING (WITH RACING STRIPES, UNDERGLOW, HEADLIGHTS, NITRO, VIP AURA)
   // =========================================================================
 
   private renderCars() {
@@ -867,6 +1017,7 @@ export class RaceScene extends Phaser.Scene {
 
     for (const p of this.participants.values()) {
       activeUserIds.add(p.userId);
+      const isSpotlightCar = p.userId.toLowerCase() === this.giftSpotlightUserId;
       const hexColor = parseInt(p.color.replace("#", "0x"), 16) || 0x3b82f6;
 
       const cos = Math.cos(p.angle);
@@ -880,23 +1031,45 @@ export class RaceScene extends Phaser.Scene {
         };
       };
 
+      // 0. SPECIAL GIFT SPOTLIGHT AURA (Pulsing energy rings for givers)
+      if (isSpotlightCar) {
+        const isFront = this.giftSpotlightAngle === "FRONT";
+        const ringColor = isFront ? 0xfacc15 : 0x00f0ff;
+        const ringRadius = 56 + Math.sin(this.animTimer * 10) * 8;
+
+        g.lineStyle(3.5, ringColor, 0.95);
+        g.strokeCircle(p.x, p.y, ringRadius);
+        g.lineStyle(1.8, 0xffffff, 0.85);
+        g.strokeCircle(p.x, p.y, ringRadius + 6);
+
+        // 4 Glowing Diamond Starbursts along ring
+        for (let a = 0; a < 4; a++) {
+          const ang = this.animTimer * 3 + a * (Math.PI / 2);
+          const sx = p.x + Math.cos(ang) * ringRadius;
+          const sy = p.y + Math.sin(ang) * ringRadius;
+          g.fillStyle(0xffffff, 1.0);
+          g.fillCircle(sx, sy, 3.5);
+        }
+      }
+
       // 1. NEON UNDERGLOW (Soft radial pool beneath car on asphalt)
-      g.fillStyle(hexColor, 0.5);
-      g.fillEllipse(p.x, p.y, 74, 42);
+      const underglowRadius = isSpotlightCar ? 90 : 74;
+      g.fillStyle(isSpotlightCar ? 0xfacc15 : hexColor, isSpotlightCar ? 0.65 : 0.5);
+      g.fillEllipse(p.x, p.y, underglowRadius, 44);
 
       // 2. HEADLIGHT PROJECTION BEAMS (Illuminating track forward)
-      g.fillStyle(0xfef08a, 0.2);
+      g.fillStyle(0xfef08a, 0.22);
       const hlBaseL = tf(28, -10);
       const hlBaseR = tf(28, 10);
-      const hlTipL = tf(125, -36);
-      const hlTipR = tf(125, 36);
+      const hlTipL = tf(130, -38);
+      const hlTipR = tf(130, 38);
       g.fillTriangle(hlBaseL.x, hlBaseL.y, hlTipL.x, hlTipL.y, hlTipR.x, hlTipR.y);
 
       // 3. CAR SHADOW & 4 WIDE ALLOY WHEELS
       g.fillStyle(0x000000, 0.7);
       g.fillEllipse(p.x + 2, p.y + 4, 60, 32);
 
-      // Wheels (Gloss black tires with subtle silver rim)
+      // Wheels
       g.fillStyle(0x090d16, 1.0);
       const wFL = tf(18, -18);
       const wFR = tf(18, 18);
@@ -931,7 +1104,7 @@ export class RaceScene extends Phaser.Scene {
       g.fillPath();
 
       // Sleek High-Gloss Chassis Outline
-      g.lineStyle(2.2, 0xffffff, 0.9);
+      g.lineStyle(2.2, isSpotlightCar ? 0xfacc15 : 0xffffff, 0.95);
       g.strokePath();
 
       // Front Aerodynamic Splitter
@@ -1009,7 +1182,16 @@ export class RaceScene extends Phaser.Scene {
       }
       label.setPosition(p.x, p.y - 46);
       label.setRotation(-this.camAngle); // Keeps label horizontal on screen
-      label.setText(`🏎️ ${p.nickname}`);
+
+      if (isSpotlightCar) {
+        label.setText(`👑 ${p.nickname.toUpperCase()} (GIFT)`);
+        label.setBackgroundColor("#eab308");
+        label.setColor("#000000");
+      } else {
+        label.setText(`🏎️ ${p.nickname}`);
+        label.setBackgroundColor("#070b18fa");
+        label.setColor("#ffffff");
+      }
       label.setVisible(true);
     }
 
@@ -1027,7 +1209,6 @@ export class RaceScene extends Phaser.Scene {
     g.clear();
 
     for (const obs of this.obstacles) {
-      // Iridescent oil slick
       g.fillStyle(0x070b19, 0.88);
       g.fillEllipse(obs.x, obs.y, 52, 34);
       g.fillStyle(0x00f0ff, 0.55);
@@ -1079,7 +1260,6 @@ export class RaceScene extends Phaser.Scene {
         row.nameText.setText(`🏎️ ${item.nickname.toUpperCase()}`);
 
         if (i === 0) {
-          // Highlight card for 1st Place (FLASH style)
           row.bg.setFillStyle(0xfacc15, 0.92);
           row.bg.setStrokeStyle(2, 0xffffff, 1.0);
           row.nameText.setColor("#000000");
@@ -1091,8 +1271,7 @@ export class RaceScene extends Phaser.Scene {
           row.nameText.setColor("#ffffff");
           row.gapText.setColor("#94a3b8");
 
-          // Calculate dynamic gap: e.g. -0.71, -1.35
-          const progressDiff = (topList[0].lap - item.lap) + (topList[0].progress - item.progress);
+          const progressDiff = topList[0].lap - item.lap + (topList[0].progress - item.progress);
           const gapSec = Math.max(0.2, progressDiff * 14.5).toFixed(2);
           row.gapText.setText(item.finished ? "FINISH" : `-${gapSec}`);
         }
@@ -1121,23 +1300,19 @@ export class RaceScene extends Phaser.Scene {
       this.speedValueText.setText(`${kmh}`);
       this.rankBigText.setText("1ST");
 
-      // Draw Dual-Gradient Nitro Boost Gauge Bar
       const gaugeX = 1680;
       const gaugeY = 120;
       const gaugeW = 200;
       const gaugeH = 12;
 
-      // Dark gauge track
       g.fillStyle(0x0a1024, 0.85);
       g.fillRoundedRect(gaugeX, gaugeY, gaugeW, gaugeH, 4);
       g.lineStyle(1.5, 0x1e293b, 0.8);
       g.strokeRoundedRect(gaugeX, gaugeY, gaugeW, gaugeH, 4);
 
-      // Cyan Segment (Left)
       g.fillStyle(0x00f0ff, 0.95);
       g.fillRoundedRect(gaugeX, gaugeY, gaugeW * 0.65, gaugeH, 4);
 
-      // Orange Segment (Right)
       g.fillStyle(0xf97316, 0.95);
       g.fillRoundedRect(gaugeX + gaugeW * 0.65, gaugeY, gaugeW * 0.35, gaugeH, 4);
 
@@ -1165,15 +1340,16 @@ export class RaceScene extends Phaser.Scene {
     const mapW = 220;
     const mapH = 170;
 
-    // Glassmorphism card frame
     g.fillStyle(0x070c1d, 0.88);
     g.fillRoundedRect(mapX, mapY, mapW, mapH, 14);
     g.lineStyle(1.5, 0x00f0ff, 0.35);
     g.strokeRoundedRect(mapX, mapY, mapW, mapH, 14);
 
-    // Compute bounds of circuit to fit inside minimap
     const pts = this.trackData.waypoints;
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity;
     for (const p of pts) {
       if (p.x < minX) minX = p.x;
       if (p.x > maxX) maxX = p.x;
@@ -1192,7 +1368,6 @@ export class RaceScene extends Phaser.Scene {
       };
     };
 
-    // Draw Minimap Circuit Outline
     g.lineStyle(4, 0x38bdf8, 0.85);
     g.beginPath();
     const startM = toMap(pts[0].x, pts[0].y);
@@ -1204,13 +1379,11 @@ export class RaceScene extends Phaser.Scene {
     g.closePath();
     g.strokePath();
 
-    // Checkered Flag icon at Start/Finish on Minimap
     g.fillStyle(0xffffff, 1.0);
     g.fillCircle(startM.x, startM.y, 4.5);
     g.lineStyle(1.5, 0x000000, 1.0);
     g.strokeCircle(startM.x, startM.y, 4.5);
 
-    // Draw Real-time Racer Blips on Minimap
     let isLeader = true;
     for (const item of this.leaderboard) {
       const p = this.participants.get(item.userId);
@@ -1219,7 +1392,6 @@ export class RaceScene extends Phaser.Scene {
       const hexColor = parseInt(item.color.replace("#", "0x"), 16) || 0x38bdf8;
 
       if (isLeader) {
-        // Pulsing radar halo around leader
         this.radarPingRadius = 4 + (Math.sin(this.animTimer * 6) + 1) * 3;
         g.lineStyle(1.5, 0xfacc15, 0.8);
         g.strokeCircle(mp.x, mp.y, this.radarPingRadius);
